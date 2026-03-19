@@ -26,7 +26,7 @@ with col2:
     st.caption("Supply Chain Analysis - BOM & Packing Control")
 
 with col3:
-    st.image(stream_logo, width=500)
+    st.image(stream_logo, width=800)
 
 # =========================
 # UPLOAD FILE
