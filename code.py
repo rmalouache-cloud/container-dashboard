@@ -19,14 +19,14 @@ stream_logo = Image.open("stream_logo.png")
 col1, col2, col3 = st.columns([1, 5, 1])
 
 with col1:
-    st.image(container_logo, width=90)
+    st.image(container_logo, width=300)
 
 with col2:
-    st.title("📦 Container Filling Industrial Dashboard")
+    st.title(" Container Filling Industrial Dashboard")
     st.caption("Supply Chain Analysis - BOM & Packing Control")
 
 with col3:
-    st.image(stream_logo, width=130)
+    st.image(stream_logo, width=500)
 
 # =========================
 # UPLOAD FILE
