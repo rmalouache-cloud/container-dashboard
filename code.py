@@ -19,7 +19,7 @@ stream_logo = Image.open("stream_logo.png")
 col1, col2, col3 = st.columns([1, 5, 1])
 
 with col1:
-    st.image(container_logo, width=300)
+    st.image(container_logo, width=400)
 
 with col2:
     st.title(" Container Filling Industrial Dashboard")
