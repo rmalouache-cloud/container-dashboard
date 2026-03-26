@@ -188,7 +188,8 @@ if file is not None:
         ax.set_xlabel("Container")
         ax.set_title("Container Filling Rate")
 
-        plt.xticks(rotation=45)
+        plt.xticks(rotation=45, ha='right') 
+        plt.tight_layout()
 
         st.pyplot(fig)
 
