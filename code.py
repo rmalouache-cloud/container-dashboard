@@ -29,6 +29,83 @@ with col3:
     st.image(stream_logo, width=800)
 
 # =========================
+# 📘 USER GUIDE (FR + EN)
+# =========================
+with st.expander("📘 Manuel d'utilisation / User Guide"):
+
+    st.markdown("""
+# 🇫🇷 Manuel d'utilisation
+
+### 🎯 Objectif
+Analyser le taux de remplissage des conteneurs à partir d’un fichier Excel.
+
+### 📂 Format requis
+- CONTAINER NO  
+- CTNER.SIZE (20GP, 40GP, 40HQ)  
+- CBM  
+
+### 🚀 Étapes
+1. Upload fichier Excel  
+2. Vérifier les données  
+3. Lire les résultats  
+4. Visualiser graphique  
+5. Télécharger Excel ou PDF  
+
+### 📏 Règles
+- 20GP → 33  
+- 40GP → 67  
+- 40HQ → 76  
+
+👉 OK ≥ 50%  
+👉 NON CONFORME < 50%  
+
+### ❌ Problèmes
+- Colonne CBM manquante  
+- Données incorrectes  
+
+### 📌 Infos
+- Version : 1.0  
+- Auteur : Bomare Company  
+- Date : 2026  
+
+---
+
+# 🇬🇧 User Guide
+
+### 🎯 Purpose
+Analyze container filling rate from an Excel file.
+
+### 📂 Required columns
+- CONTAINER NO  
+- CTNER.SIZE  
+- CBM  
+
+### 🚀 Steps
+1. Upload Excel file  
+2. Check preview  
+3. Analyze results  
+4. View chart  
+5. Download Excel/PDF  
+
+### 📏 Rules
+- 20GP → 33  
+- 40GP → 67  
+- 40HQ → 76  
+
+👉 OK ≥ 50%  
+👉 NON COMPLIANT < 50%  
+
+### ❌ Issues
+- Missing CBM column  
+- Incorrect data  
+
+### 📌 Info
+- Version: 1.0  
+- Author: Bomare Company  
+- Date: 2026  
+""")
+
+# =========================
 # UPLOAD FILE
 # =========================
 file = st.file_uploader("Upload Packing Excel file", type=["xlsx"])
@@ -98,7 +175,7 @@ if file is not None:
         st.dataframe(styled)
 
         # =========================
-        # CHART (SMALL)
+        # CHART
         # =========================
         st.subheader("📈 Filling Rate Chart")
 
@@ -128,7 +205,7 @@ if file is not None:
         )
 
         # =========================
-        # EXPORT PDF (TABLE + GRID + CHART)
+        # EXPORT PDF
         # =========================
         chart_path = tempfile.NamedTemporaryFile(delete=False, suffix=".png").name
         fig.savefig(chart_path, bbox_inches="tight")
@@ -140,9 +217,6 @@ if file is not None:
         pdf.cell(200, 10, txt="Container Filling Industrial Dashboard", ln=True, align="C")
         pdf.ln(5)
 
-        # =========================
-        # TABLE HEADER
-        # =========================
         pdf.set_font("Arial", "B", 9)
 
         headers = [
@@ -160,36 +234,24 @@ if file is not None:
             pdf.cell(col_widths[i], 8, h, border=1, align="C")
         pdf.ln()
 
-        # =========================
-        # TABLE ROWS
-        # =========================
         pdf.set_font("Arial", size=9)
 
         for i, row in summary.iterrows():
-
             pdf.cell(col_widths[0], 8, str(row["CONTAINER NO"]), border=1)
             pdf.cell(col_widths[1], 8, str(row["CTNER.SIZE"]), border=1)
             pdf.cell(col_widths[2], 8, f"{row['TOTAL_VOLUME']:.2f}", border=1)
             pdf.cell(col_widths[3], 8, str(row["CAPACITY"]), border=1)
             pdf.cell(col_widths[4], 8, f"{row['FILL_RATE_%']:.2f}%", border=1)
             pdf.cell(col_widths[5], 8, str(row["STATUS"]), border=1)
-
             pdf.ln()
 
-        # =========================
-        # CHART IN PDF
-        # =========================
         pdf.ln(5)
         pdf.set_font("Arial", "B", 11)
         pdf.cell(200, 10, txt="Filling Rate Chart", ln=True)
 
         pdf.image(chart_path, w=180)
 
-        # =========================
-        # SAVE PDF
-        # =========================
         pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-
         pdf.output(pdf_file.name)
 
         with open(pdf_file.name, "rb") as f:
@@ -199,7 +261,4 @@ if file is not None:
                 file_name="container_dashboard.pdf"
             )
 
-        # =========================
-        # SUCCESS
-        # =========================
         st.success("✅ Analysis completed successfully")
