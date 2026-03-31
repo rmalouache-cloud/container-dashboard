@@ -56,8 +56,8 @@ Analyser le taux de remplissage des conteneurs à partir d’un fichier Excel.
 - 40GP → 67  
 - 40HQ → 76  
 
-👉 OK ≥ 50%  
-👉 NON CONFORME < 50%  
+👉 OK ≥ 70%  
+👉 NON CONFORME < 70%  
 
 ### ❌ Problèmes
 - Colonne CBM manquante  
@@ -92,8 +92,8 @@ Analyze container filling rate from an Excel file.
 - 40GP → 67  
 - 40HQ → 76  
 
-👉 OK ≥ 50%  
-👉 NON COMPLIANT < 50%  
+👉 OK ≥ 70%  
+👉 NON COMPLIANT < 70%  
 
 ### ❌ Issues
 - Missing CBM column  
@@ -157,7 +157,7 @@ if file is not None:
         summary["FILL_RATE_%"] = summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
 
         summary["STATUS"] = summary["FILL_RATE_%"].apply(
-            lambda x: "OK" if x >= 50 else "NON CONFORME"
+            lambda x: "OK" if x >= 70 else "NON CONFORME"
         )
 
         # =========================
@@ -182,7 +182,7 @@ if file is not None:
         fig, ax = plt.subplots(figsize=(7, 3))
 
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-        ax.axhline(50, linestyle="--", color="red")
+        ax.axhline(70, linestyle="--", color="red")
 
         ax.set_ylabel("Filling Rate %")
         ax.set_xlabel("Container")
