@@ -156,6 +156,7 @@ if file is not None:
         # =========================
         summary["FILL_RATE_%"] = summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
 
+        # ✅ CONDITION FIXÉE À 70%
         summary["STATUS"] = summary["FILL_RATE_%"].apply(
             lambda x: "OK" if x >= 70 else "NON CONFORME"
         )
@@ -182,7 +183,7 @@ if file is not None:
         fig, ax = plt.subplots(figsize=(7, 3))
 
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-        ax.axhline(70, linestyle="--", color="red")
+        ax.axhline(70, linestyle="--", color="red")  # seuil 70%
 
         ax.set_ylabel("Filling Rate %")
         ax.set_xlabel("Container")
