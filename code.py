@@ -12,7 +12,7 @@ import os
 st.set_page_config(page_title="Container Dashboard", layout="wide")
 
 # =========================
-# LOGOS + HEADER (TON CODE)
+# LOGOS + HEADER
 # =========================
 container_logo = Image.open("conteneur_logo.png")
 stream_logo = Image.open("stream_logo.png")
@@ -20,17 +20,17 @@ stream_logo = Image.open("stream_logo.png")
 col1, col2, col3 = st.columns([1, 5, 1])
 
 with col1:
-    st.image(container_logo, width=400)
+    st.image(container_logo, width=200)
 
 with col2:
     st.title(" Container Filling Industrial Dashboard")
     st.caption("Supply Chain Analysis - BOM & Packing Control")
 
 with col3:
-    st.image(stream_logo, width=800)
+    st.image(stream_logo, width=200)
 
 # =========================
-# USER GUIDE (TON CODE)
+# USER GUIDE
 # =========================
 with st.expander("📘 Manuel d'utilisation / User Guide"):
     st.markdown("""
@@ -59,10 +59,6 @@ Analyser le taux de remplissage des conteneurs à partir d’un fichier Excel.
 👉 OK ≥ 70%  
 👉 NON CONFORME < 70%  
 
-### ❌ Problèmes
-- Colonne CBM manquante  
-- Données incorrectes  
-
 ---
 
 # 🇬🇧 User Guide
@@ -81,23 +77,6 @@ Analyze container filling rate from an Excel file.
 3. Analyze results  
 4. View chart  
 5. Download Excel/PDF  
-
-### 📏 Rules
-- 20GP → 33  
-- 40GP → 67  
-- 40HQ → 76  
-
-👉 OK ≥ 70%  
-👉 NON COMPLIANT < 70%  
-
-### ❌ Issues
-- Missing CBM column  
-- Incorrect data  
-
-### 📌 Info
-- Version: 1.0  
-- Author: Bomare Company  
-- Date: 2026
 """)
 
 # =========================
@@ -140,11 +119,7 @@ if file is not None:
     st.write("📄 Data Preview")
     st.dataframe(df)
 
-    cbm_col = None
-    for col in df.columns:
-        if "CBM" in col.upper():
-            cbm_col = col
-            break
+    cbm_col = next((col for col in df.columns if "CBM" in col.upper()), None)
 
     if cbm_col is None:
         st.error("❌ CBM column not found")
@@ -156,11 +131,7 @@ if file is not None:
 
         summary.rename(columns={cbm_col: "TOTAL_VOLUME"}, inplace=True)
 
-        capacity_map = {
-            "20GP": 33,
-            "40GP": 67,
-            "40HQ": 76
-        }
+        capacity_map = {"20GP": 33, "40GP": 67, "40HQ": 76}
 
         summary["CAPACITY"] = summary["CTNER.SIZE"].map(capacity_map)
 
@@ -175,14 +146,30 @@ if file is not None:
         st.subheader("📊 Result Table")
         st.dataframe(summary)
 
+        # =========================
+        # 📈 DIAGRAMME (FIXED)
+        # =========================
+        st.subheader("📈 Filling Rate Chart")
+
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
+        ax.axhline(70, linestyle="--")
+        ax.set_title("Filling Rate (%)")
+        ax.set_ylabel("%")
+        ax.set_xlabel("Container")
+
+        fig.tight_layout()
+
+        st.pyplot(fig)  # ✅ IMPORTANT
+
 # =========================
-# PDF (CORRIGÉ SANS TOUCHER TON LOGIQUE)
+# PDF GENERATION
 # =========================
 if summary is not None:
 
-    pdf = FPDF(orientation="L", unit="mm", format="A4")  # ✅ FIX LARGEUR
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.add_page()
-
     pdf.set_font("Arial", "", 8)
 
     # =========================
@@ -202,7 +189,7 @@ if summary is not None:
     pdf.ln(8)
 
     # =========================
-    # TABLE FIX
+    # TABLE FIX WIDTH
     # =========================
     pdf.set_font("Arial", "B", 8)
 
@@ -231,10 +218,7 @@ if summary is not None:
         for i, val in enumerate(row_values):
 
             if headers[i] == "STATUS":
-                if val == "OK":
-                    pdf.set_text_color(0, 150, 0)
-                else:
-                    pdf.set_text_color(255, 0, 0)
+                pdf.set_text_color(0, 150, 0) if val == "OK" else pdf.set_text_color(255, 0, 0)
             else:
                 pdf.set_text_color(0, 0, 0)
 
@@ -243,7 +227,7 @@ if summary is not None:
         pdf.ln()
 
     # =========================
-    # CHART
+    # CHART IN PDF
     # =========================
     pdf.ln(10)
     pdf.set_font("Arial", "B", 12)
@@ -254,8 +238,6 @@ if summary is not None:
     fig, ax = plt.subplots(figsize=(8, 4))
     ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
     ax.axhline(70, linestyle="--")
-    ax.set_title("Container Filling Rate")
-    ax.set_ylabel("%")
 
     fig.tight_layout()
     fig.savefig(tmp_img.name, dpi=300, bbox_inches="tight")
