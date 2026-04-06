@@ -97,7 +97,7 @@ if file is not None:
         st.dataframe(summary)
 
         # =========================
-        # DIAGRAMME (FIX)
+        # DIAGRAMME
         # =========================
         st.subheader("📈 Filling Rate Chart")
 
@@ -106,18 +106,14 @@ if file is not None:
         fig, ax = plt.subplots(figsize=(8, 4))
 
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-
-        # ✅ LIGNE ROUGE FIXÉE
         ax.axhline(y=70, color='red', linestyle='--', linewidth=3, zorder=5)
 
         ax.set_ylim(0, 100)
-
         ax.set_title("Filling Rate (%)")
         ax.set_ylabel("%")
         ax.set_xlabel("Container")
 
         fig.tight_layout()
-
         st.pyplot(fig)
 
 # =========================
@@ -128,9 +124,6 @@ if summary is not None:
     pdf = FPDF("P", "mm", "A4")
     pdf.add_page()
 
-    # =========================
-    # ENTETE PLEINE LARGEUR (5cm)
-    # =========================
     logo_path = "entete.PNG"
 
     if os.path.exists(logo_path):
@@ -138,17 +131,11 @@ if summary is not None:
 
     pdf.ln(55)
 
-    # =========================
-    # TITLE
-    # =========================
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 10, full_title, ln=True, align="C")
 
     pdf.ln(5)
 
-    # =========================
-    # TABLE
-    # =========================
     pdf.set_font("Arial", "B", 7)
 
     page_width = pdf.w - 20
@@ -189,13 +176,9 @@ if summary is not None:
 
         pdf.ln()
 
-    # =========================
-    # GRAPH (MM PAGE)
-    # =========================
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
 
     fig, ax = plt.subplots(figsize=(6, 3))
-
     ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
     ax.axhline(y=70, color='red', linestyle='--', linewidth=3)
 
@@ -206,11 +189,10 @@ if summary is not None:
     pdf.ln(3)
     pdf.image(tmp_img.name, x=10, w=180)
 
-    # =========================
-    # DOWNLOAD
-    # =========================
     tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    pdf.output(tmp_pdf.name)
+
+    # ✅ CORRECTION ICI (anti None)
+    _ = pdf.output(tmp_pdf.name)
 
     with open(tmp_pdf.name, "rb") as f:
         st.download_button(
