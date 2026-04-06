@@ -122,8 +122,19 @@ if file is not None:
             lambda x: "OK" if x >= 70 else "NON CONFORME"
         )
 
+        # =========================
+        # COLOR DISPLAY TABLE
+        # =========================
+        def color_status(val):
+            if val == "OK":
+                return "background-color: lightgreen"
+            else:
+                return "background-color: lightcoral"
+
+        styled_df = summary.style.applymap(color_status, subset=["STATUS"])
+
         st.subheader("📊 Result Table")
-        st.dataframe(summary)
+        st.dataframe(styled_df)
 
         # =========================
         # CHART
@@ -151,35 +162,43 @@ if summary is not None:
     )
 
 # =========================
-# 📄 PDF AVEC TITRE DYNAMIQUE
+# 📄 PDF WITH LOGO + TABLE + CHART
 # =========================
-
 if summary is not None:
 
     pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.add_page()
 
-    # ===== DYNAMIC TITLE =====
-    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{odf}"
+    # ===== LOGO =====
+    logo_path = "logo.png"  # <-- mets ton logo ici
 
+    try:
+        pdf.image(logo_path, x=10, y=8, w=30)
+    except:
+        pass
+
+    # ===== TITLE =====
     pdf.set_font("Arial", "B", 14)
     pdf.cell(0, 10, full_title, ln=True, align="C")
 
-    pdf.ln(5)
+    pdf.ln(10)
 
-    # ===== TABLE =====
-    pdf.set_font("Arial", "B", 9)
+    # =========================
+    # TABLE HEADER
+    # =========================
+    pdf.set_font("Arial", "B", 8)
 
     page_width = 270
     col_width = page_width / len(summary.columns)
 
-    # HEADER
     for col in summary.columns:
         pdf.cell(col_width, 8, str(col), border=1, align="C")
 
     pdf.ln()
 
-    # CONTENT
+    # =========================
+    # TABLE CONTENT (WITH COLORS)
+    # =========================
     pdf.set_font("Arial", "", 8)
 
     for _, row in summary.iterrows():
@@ -189,11 +208,32 @@ if summary is not None:
             if isinstance(val, float):
                 val = f"{val:.2f}"
 
+            # Color for STATUS
+            if col == "STATUS":
+                if val == "OK":
+                    pdf.set_text_color(0, 128, 0)  # green
+                else:
+                    pdf.set_text_color(255, 0, 0)  # red
+            else:
+                pdf.set_text_color(0, 0, 0)
+
             pdf.cell(col_width, 8, str(val), border=1, align="C")
 
         pdf.ln()
 
-    # ===== SAVE =====
+    pdf.ln(5)
+
+    # =========================
+    # ADD CHART TO PDF
+    # =========================
+    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    fig.savefig(tmp_img.name)
+
+    pdf.image(tmp_img.name, x=10, w=250)
+
+    # =========================
+    # SAVE PDF
+    # =========================
     tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(tmp_pdf.name)
 
