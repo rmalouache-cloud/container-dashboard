@@ -11,6 +11,18 @@ import os
 st.set_page_config(page_title="Container Dashboard", layout="wide")
 
 # =========================
+# SESSION STATE
+# =========================
+if "packing_type" not in st.session_state:
+    st.session_state.packing_type = "Panel"
+
+if "model" not in st.session_state:
+    st.session_state.model = ""
+
+if "odf" not in st.session_state:
+    st.session_state.odf = ""
+
+# =========================
 # HEADER
 # =========================
 col1, col2, col3 = st.columns([1, 5, 1])
@@ -31,11 +43,12 @@ st.markdown("### 📦 Study Information")
 
 packing_type = st.selectbox(
     "Type of Packing List",
-    ["Panel", "SP", "SP/MainBoard", "OC"]
+    ["Panel", "SP", "SP/MainBoard", "OC"],
+    key="packing_type"
 )
 
-model = st.text_input("Model (ex: Mini LED)")
-odf = st.text_input("ODF (ex: IDL2500)")
+model = st.text_input("Model (ex: Mini LED)", key="model")
+odf = st.text_input("ODF (ex: IDL2500)", key="odf")
 
 st.markdown("---")
 
@@ -50,7 +63,7 @@ else:
 st.subheader(full_title)
 
 # =========================
-# UPLOAD
+# UPLOAD FILE
 # =========================
 file = st.file_uploader("Upload Packing Excel file", type=["xlsx"])
 
@@ -64,10 +77,11 @@ if file is not None:
     st.write("📄 Data Preview")
     st.dataframe(df)
 
-    # =========================
-    # CBM COLUMN
-    # =========================
-    cbm_col = next((col for col in df.columns if "CBM" in col.upper()), None)
+    cbm_col = None
+    for col in df.columns:
+        if "CBM" in col.upper():
+            cbm_col = col
+            break
 
     if cbm_col is None:
         st.error("❌ CBM column not found")
@@ -79,7 +93,11 @@ if file is not None:
 
         summary.rename(columns={cbm_col: "TOTAL_VOLUME"}, inplace=True)
 
-        capacity_map = {"20GP": 33, "40GP": 67, "40HQ": 76}
+        capacity_map = {
+            "20GP": 33,
+            "40GP": 67,
+            "40HQ": 76
+        }
 
         summary["CAPACITY"] = summary["CTNER.SIZE"].map(capacity_map)
 
@@ -95,32 +113,38 @@ if file is not None:
         st.dataframe(summary)
 
 # =========================
-# PDF
+# PDF GENERATION
 # =========================
 if summary is not None:
 
-    pdf = FPDF(orientation="L", unit="mm", format="A4")  # ✅ LANDSCAPE
+    pdf = FPDF(orientation="L", unit="mm", format="A4")  # ✅ FIX WIDTH ISSUE
     pdf.add_page()
+
+    pdf.set_font("Arial", "", 8)
 
     # =========================
     # HEADER IMAGE (ENTETE)
     # =========================
-    entete_path = "entete/entete.png"  # chemin GitHub
+    logo_path = "entete/entete.png"  # 🔥 chemin GitHub
 
-    if os.path.exists(entete_path):
-        pdf.image(entete_path, x=10, y=8, w=60)
-
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, full_title, ln=True, align="C")
-    pdf.ln(10)
+    if os.path.exists(logo_path):
+        pdf.image(logo_path, x=10, y=8, w=50)
 
     # =========================
-    # TABLE (AUTO WIDTH FIX)
+    # TITLE
+    # =========================
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, full_title, ln=True, align="C")
+
+    pdf.ln(8)
+
+    # =========================
+    # TABLE
     # =========================
     pdf.set_font("Arial", "B", 8)
 
-    table_width = 270
-    col_width = table_width / len(summary.columns)
+    page_width = pdf.w - 20  # ✅ largeur utile
+    col_width = page_width / len(summary.columns)
 
     headers = ["CONTAINER NO", "SIZE", "TOTAL_VOL", "CAPACITY", "FILL_RATE %", "STATUS"]
 
@@ -159,6 +183,7 @@ if summary is not None:
     # CHART
     # =========================
     pdf.ln(10)
+
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 10, "Filling Rate Chart", ln=True)
 
