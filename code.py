@@ -46,15 +46,15 @@ packing_type = st.selectbox(
 )
 
 model = st.text_input("Model")
-bl No = st.text_input("BL No")
+bl_No = st.text_input("BL No")
 
 st.markdown("---")
 
 # =========================
 # TITLE
 # =========================
-if model and bl No:
-    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{bl No}"
+if model and bl_No:
+    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{bl_No}"
 else:
     full_title = "Container Filling Industrial Dashboard"
 
