@@ -164,34 +164,34 @@ if file is not None:
         st.pyplot(fig)  # ✅ IMPORTANT
 
 # =========================
-# PDF GENERATION
+# PDF GENERATION (CORRIGÉ)
 # =========================
 if summary is not None:
 
-    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf = FPDF(orientation="P", unit="mm", format="A4")  # ✅ NORMAL (portrait)
     pdf.add_page()
-    pdf.set_font("Arial", "", 8)
 
     # =========================
-    # HEADER IMAGE
+    # ENTETE (IMAGE)
     # =========================
-    logo_path = "entete/entete.png"
+    logo_path = "entete.png"
 
     if os.path.exists(logo_path):
-        pdf.image(logo_path, x=10, y=8, w=60)
+        pdf.image(logo_path, x=10, y=8, w=50)  # taille + position
 
     # =========================
     # TITLE
     # =========================
     pdf.set_font("Arial", "B", 12)
+    pdf.ln(25)  # espace après entete
     pdf.cell(0, 10, full_title, ln=True, align="C")
 
-    pdf.ln(8)
+    pdf.ln(5)
 
     # =========================
-    # TABLE FIX WIDTH
+    # TABLEAU (AJUSTÉ POUR PAGE)
     # =========================
-    pdf.set_font("Arial", "B", 8)
+    pdf.set_font("Arial", "B", 7)
 
     page_width = pdf.w - 20
     col_width = page_width / len(summary.columns)
@@ -199,12 +199,18 @@ if summary is not None:
     headers = ["CONTAINER NO", "SIZE", "TOTAL_VOL", "CAPACITY", "FILL_RATE %", "STATUS"]
 
     for col in headers:
-        pdf.cell(col_width, 8, col, border=1, align="C")
+        pdf.cell(col_width, 6, col, border=1, align="C")
+
     pdf.ln()
 
-    pdf.set_font("Arial", "", 8)
+    pdf.set_font("Arial", "", 7)
 
-    for _, row in summary.iterrows():
+    # limiter nombre de lignes pour rester sur 1 page
+    max_rows = 8
+
+    for i, (_, row) in enumerate(summary.iterrows()):
+        if i >= max_rows:
+            break
 
         row_values = [
             row["CONTAINER NO"],
@@ -215,38 +221,42 @@ if summary is not None:
             row["STATUS"]
         ]
 
-        for i, val in enumerate(row_values):
+        for j, val in enumerate(row_values):
 
-            if headers[i] == "STATUS":
-                pdf.set_text_color(0, 150, 0) if val == "OK" else pdf.set_text_color(255, 0, 0)
+            if headers[j] == "STATUS":
+                if val == "OK":
+                    pdf.set_text_color(0, 150, 0)
+                else:
+                    pdf.set_text_color(255, 0, 0)
             else:
                 pdf.set_text_color(0, 0, 0)
 
-            pdf.cell(col_width, 8, str(val), border=1, align="C")
+            pdf.cell(col_width, 6, str(val), border=1, align="C")
 
         pdf.ln()
 
     # =========================
-    # CHART IN PDF
+    # GRAPH (SUR MÊME PAGE)
     # =========================
-    pdf.ln(10)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Filling Rate Chart", ln=True)
-
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
 
-    fig, ax = plt.subplots(figsize=(8, 4))
+    fig, ax = plt.subplots(figsize=(6, 3))
+
     ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
     ax.axhline(70, linestyle="--")
+    ax.set_title("Filling Rate (%)")
+    ax.set_ylabel("%")
 
     fig.tight_layout()
     fig.savefig(tmp_img.name, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
-    pdf.image(tmp_img.name, x=10, w=250)
+    # placement du graphique sous le tableau
+    pdf.ln(3)
+    pdf.image(tmp_img.name, x=10, w=180)
 
     # =========================
-    # DOWNLOAD PDF
+    # DOWNLOAD
     # =========================
     tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(tmp_pdf.name)
