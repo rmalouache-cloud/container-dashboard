@@ -1,120 +1,4 @@
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-from PIL import Image
-from fpdf import FPDF
-import tempfile
-import os
-
-# =========================
-# CONFIG
-# =========================
-st.set_page_config(page_title="Container Dashboard", layout="wide")
-
-# =========================
-# LOGOS + HEADER
-# =========================
-container_logo = Image.open("conteneur_logo.png")
-stream_logo = Image.open("stream_logo.png")
-
-col1, col2, col3 = st.columns([1, 5, 1])
-
-with col1:
-    st.image(container_logo, width=200)
-
-with col2:
-    st.title(" Container Filling Industrial Dashboard")
-    st.caption("Supply Chain Analysis - BOM & Packing Control")
-
-with col3:
-    st.image(stream_logo, width=200)
-
-# =========================
-# USER GUIDE
-# =========================
-with st.expander("📘 Manuel d'utilisation / User Guide"):
-    st.markdown("Guide utilisateur ici...")
-
-# =========================
-# INPUTS
-# =========================
-st.markdown("### 📦 Study Information")
-
-packing_type = st.selectbox(
-    "Type of Packing List",
-    ["Panel", "SP", "SP/MainBoard", "OC"]
-)
-
-model = st.text_input("Model")
-odf = st.text_input("ODF")
-
-st.markdown("---")
-
-# =========================
-# TITLE
-# =========================
-if model and odf:
-    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{odf}"
-else:
-    full_title = "Container Filling Industrial Dashboard"
-
-st.subheader(full_title)
-
-# =========================
-# UPLOAD
-# =========================
-file = st.file_uploader("Upload Excel", type=["xlsx"])
-
-summary = None
-
-if file is not None:
-
-    df = pd.read_excel(file)
-    df.columns = df.columns.str.strip()
-
-    st.dataframe(df)
-
-    cbm_col = next((col for col in df.columns if "CBM" in col.upper()), None)
-
-    if cbm_col:
-
-        summary = df.groupby(
-            ["CONTAINER NO", "CTNER.SIZE"], as_index=False
-        ).agg({cbm_col: "sum"})
-
-        summary.rename(columns={cbm_col: "TOTAL_VOLUME"}, inplace=True)
-
-        capacity_map = {"20GP": 33, "40GP": 67, "40HQ": 76}
-        summary["CAPACITY"] = summary["CTNER.SIZE"].map(capacity_map)
-
-        summary["FILL_RATE_%"] = summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
-
-        summary["STATUS"] = summary["FILL_RATE_%"].apply(
-            lambda x: "OK" if x >= 70 else "NON CONFORME"
-        )
-
-        st.subheader("📊 Result Table")
-        _ = st.dataframe(summary)
-
-        # =========================
-        # DIAGRAMME
-        # =========================
-        st.subheader("📈 Filling Rate Chart")
-
-        plt.close('all')
-
-        fig, ax = plt.subplots(figsize=(8, 4))
-
-        ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-        ax.axhline(y=70, color='red', linestyle='--', linewidth=3, zorder=5)
-
-        ax.set_ylim(0, 100)
-        ax.set_title("Filling Rate (%)")
-        ax.set_ylabel("%")
-        ax.set_xlabel("Container")
-
-        fig.tight_layout()
-        st.pyplot(fig)
+import io
 
 # =========================
 # PDF
@@ -189,14 +73,12 @@ if summary is not None:
     pdf.ln(3)
     pdf.image(tmp_img.name, x=10, w=180)
 
-    tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    # ✅ Utilisation d'un buffer mémoire (évite les None)
+    pdf_bytes = pdf.output(dest="S").encode("latin1")
 
-    # ✅ CORRECTION ICI (anti None)
-    _ = pdf.output(tmp_pdf.name)
-
-    with open(tmp_pdf.name, "rb") as f:
-        st.download_button(
-            label="📄 Download PDF",
-            data=f,
-            file_name=f"{model}_{odf}_dashboard.pdf"
-        )
+    st.download_button(
+        label="📄 Download PDF",
+        data=pdf_bytes,
+        file_name=f"{model}_{odf}_dashboard.pdf",
+        mime="application/pdf"
+    )
