@@ -177,7 +177,7 @@ if summary is not None:
     logo_path = "entete.PNG"
 
     if os.path.exists(logo_path):
-        pdf.image(logo_path, x=0, y=0, w=210, h=50)  # taille + position
+        pdf.image(logo_path, x=0, y=0, w=210, h=30)  # taille + position
 
     # =========================
     # TITLE
