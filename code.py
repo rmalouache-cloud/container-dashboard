@@ -46,7 +46,7 @@ packing_type = st.selectbox(
 )
 
 model = st.text_input("Model")
-bl_No = st.text_input("BL No")
+bl_No = st.text_input("BL_No")
 
 st.markdown("---")
 
