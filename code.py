@@ -5,15 +5,11 @@ from PIL import Image
 from fpdf import FPDF
 import tempfile
 import os
-import io
 
 # =========================
 # CONFIG
 # =========================
 st.set_page_config(page_title="Container Dashboard", layout="wide")
-
-# ✅ IMPORTANT : initialisation
-summary = None
 
 # =========================
 # LOGOS + HEADER
@@ -27,7 +23,7 @@ with col1:
     st.image(container_logo, width=200)
 
 with col2:
-    st.title("Container Filling Industrial Dashboard")
+    st.title(" Container Filling Industrial Dashboard")
     st.caption("Supply Chain Analysis - BOM & Packing Control")
 
 with col3:
@@ -69,6 +65,8 @@ st.subheader(full_title)
 # =========================
 file = st.file_uploader("Upload Excel", type=["xlsx"])
 
+summary = None
+
 if file is not None:
 
     df = pd.read_excel(file)
@@ -103,10 +101,12 @@ if file is not None:
         # =========================
         st.subheader("📈 Filling Rate Chart")
 
+        plt.close('all')
+
         fig, ax = plt.subplots(figsize=(8, 4))
 
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-        ax.axhline(y=70, linestyle='--', linewidth=3)
+        ax.axhline(y=70, color='red', linestyle='--', linewidth=3, zorder=5)
 
         ax.set_ylim(0, 100)
         ax.set_title("Filling Rate (%)")
@@ -139,7 +139,7 @@ if summary is not None:
     pdf.set_font("Arial", "B", 7)
 
     page_width = pdf.w - 20
-    col_width = page_width / 6
+    col_width = page_width / len(summary.columns)
 
     headers = ["CONTAINER NO", "SIZE", "TOTAL_VOL", "CAPACITY", "FILL_RATE %", "STATUS"]
 
@@ -156,7 +156,7 @@ if summary is not None:
         if i >= max_rows:
             break
 
-        values = [
+        row_values = [
             row["CONTAINER NO"],
             row["CTNER.SIZE"],
             f"{row['TOTAL_VOLUME']:.2f}",
@@ -165,7 +165,7 @@ if summary is not None:
             row["STATUS"]
         ]
 
-        for j, val in enumerate(values):
+        for j, val in enumerate(row_values):
 
             if headers[j] == "STATUS":
                 pdf.set_text_color(0, 150, 0) if val == "OK" else pdf.set_text_color(255, 0, 0)
@@ -176,12 +176,11 @@ if summary is not None:
 
         pdf.ln()
 
-    # image chart
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
 
     fig, ax = plt.subplots(figsize=(6, 3))
     ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-    ax.axhline(y=70, linestyle='--', linewidth=3)
+    ax.axhline(y=70, color='red', linestyle='--', linewidth=3)
 
     fig.tight_layout()
     fig.savefig(tmp_img.name, dpi=300, bbox_inches="tight")
@@ -190,7 +189,7 @@ if summary is not None:
     pdf.ln(3)
     pdf.image(tmp_img.name, x=10, w=180)
 
-    # ✅ génération PDF sans afficher None
+    # ✅ CORRECTION ICI (anti None)
     pdf_bytes = pdf.output(dest="S").encode("latin1")
 
     st.download_button(
