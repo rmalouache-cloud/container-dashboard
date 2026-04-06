@@ -33,51 +33,7 @@ with col3:
 # USER GUIDE
 # =========================
 with st.expander("📘 Manuel d'utilisation / User Guide"):
-    st.markdown("""
-# 🇫🇷 Manuel d'utilisation
-
-### 🎯 Objectif
-Analyser le taux de remplissage des conteneurs à partir d’un fichier Excel.
-
-### 📂 Format requis
-- CONTAINER NO  
-- CTNER.SIZE (20GP, 40GP, 40HQ)  
-- CBM  
-
-### 🚀 Étapes
-1. Upload fichier Excel  
-2. Vérifier les données  
-3. Lire les résultats  
-4. Visualiser graphique  
-5. Télécharger Excel ou PDF  
-
-### 📏 Règles
-- 20GP → 33  
-- 40GP → 67  
-- 40HQ → 76  
-
-👉 OK ≥ 70%  
-👉 NON CONFORME < 70%  
-
----
-
-# 🇬🇧 User Guide
-
-### 🎯 Purpose
-Analyze container filling rate from an Excel file.
-
-### 📂 Required columns
-- CONTAINER NO  
-- CTNER.SIZE  
-- CBM  
-
-### 🚀 Steps
-1. Upload Excel file  
-2. Check preview  
-3. Analyze results  
-4. View chart  
-5. Download Excel/PDF  
-""")
+    st.markdown("Guide utilisateur ici...")
 
 # =========================
 # INPUTS
@@ -89,8 +45,8 @@ packing_type = st.selectbox(
     ["Panel", "SP", "SP/MainBoard", "OC"]
 )
 
-model = st.text_input("Model (ex: Mini LED)")
-odf = st.text_input("ODF (ex: IDL2500)")
+model = st.text_input("Model")
+odf = st.text_input("ODF")
 
 st.markdown("---")
 
@@ -107,7 +63,7 @@ st.subheader(full_title)
 # =========================
 # UPLOAD
 # =========================
-file = st.file_uploader("Upload Packing Excel file", type=["xlsx"])
+file = st.file_uploader("Upload Excel", type=["xlsx"])
 
 summary = None
 
@@ -116,14 +72,11 @@ if file is not None:
     df = pd.read_excel(file)
     df.columns = df.columns.str.strip()
 
-    st.write("📄 Data Preview")
     st.dataframe(df)
 
     cbm_col = next((col for col in df.columns if "CBM" in col.upper()), None)
 
-    if cbm_col is None:
-        st.error("❌ CBM column not found")
-    else:
+    if cbm_col:
 
         summary = df.groupby(
             ["CONTAINER NO", "CTNER.SIZE"], as_index=False
@@ -132,12 +85,9 @@ if file is not None:
         summary.rename(columns={cbm_col: "TOTAL_VOLUME"}, inplace=True)
 
         capacity_map = {"20GP": 33, "40GP": 67, "40HQ": 76}
-
         summary["CAPACITY"] = summary["CTNER.SIZE"].map(capacity_map)
 
-        summary["FILL_RATE_%"] = (
-            summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
-        )
+        summary["FILL_RATE_%"] = summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
 
         summary["STATUS"] = summary["FILL_RATE_%"].apply(
             lambda x: "OK" if x >= 70 else "NON CONFORME"
@@ -147,49 +97,57 @@ if file is not None:
         st.dataframe(summary)
 
         # =========================
-        # 📈 DIAGRAMME (FIXED)
+        # DIAGRAMME (FIX)
         # =========================
         st.subheader("📈 Filling Rate Chart")
+
+        plt.close('all')
 
         fig, ax = plt.subplots(figsize=(8, 4))
 
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-        ax.axhline(70, linestyle="--")
+
+        # ✅ LIGNE ROUGE FIXÉE
+        ax.axhline(y=70, color='red', linestyle='--', linewidth=3, zorder=5)
+
+        ax.set_ylim(0, 100)
+
         ax.set_title("Filling Rate (%)")
         ax.set_ylabel("%")
         ax.set_xlabel("Container")
 
         fig.tight_layout()
 
-        st.pyplot(fig)  # ✅ IMPORTANT
+        st.pyplot(fig)
 
 # =========================
-# PDF GENERATION (CORRIGÉ)
+# PDF
 # =========================
 if summary is not None:
 
-    pdf = FPDF(orientation="P", unit="mm", format="A4")  # ✅ NORMAL (portrait)
+    pdf = FPDF("P", "mm", "A4")
     pdf.add_page()
 
     # =========================
-    # ENTETE (IMAGE)
+    # ENTETE PLEINE LARGEUR (5cm)
     # =========================
-    logo_path = "entete.PNG"
+    logo_path = "entete/entete.png"
 
     if os.path.exists(logo_path):
-        pdf.image(logo_path, x=0, y=0, w=210, h=25)  # taille + position
+        pdf.image(logo_path, x=0, y=0, w=210, h=25)
+
+    pdf.ln(55)
 
     # =========================
     # TITLE
     # =========================
     pdf.set_font("Arial", "B", 12)
-    pdf.ln(25)  # espace après entete
     pdf.cell(0, 10, full_title, ln=True, align="C")
 
     pdf.ln(5)
 
     # =========================
-    # TABLEAU (AJUSTÉ POUR PAGE)
+    # TABLE
     # =========================
     pdf.set_font("Arial", "B", 7)
 
@@ -205,7 +163,6 @@ if summary is not None:
 
     pdf.set_font("Arial", "", 7)
 
-    # limiter nombre de lignes pour rester sur 1 page
     max_rows = 8
 
     for i, (_, row) in enumerate(summary.iterrows()):
@@ -224,10 +181,7 @@ if summary is not None:
         for j, val in enumerate(row_values):
 
             if headers[j] == "STATUS":
-                if val == "OK":
-                    pdf.set_text_color(0, 150, 0)
-                else:
-                    pdf.set_text_color(255, 0, 0)
+                pdf.set_text_color(0, 150, 0) if val == "OK" else pdf.set_text_color(255, 0, 0)
             else:
                 pdf.set_text_color(0, 0, 0)
 
@@ -236,22 +190,19 @@ if summary is not None:
         pdf.ln()
 
     # =========================
-    # GRAPH (SUR MÊME PAGE)
+    # GRAPH (MM PAGE)
     # =========================
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
 
     fig, ax = plt.subplots(figsize=(6, 3))
 
     ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-    ax.axhline(70, color='red', linestyle='--', linewidth=2)
-    ax.set_title("Filling Rate (%)")
-    ax.set_ylabel("%")
+    ax.axhline(y=70, color='red', linestyle='--', linewidth=3)
 
     fig.tight_layout()
     fig.savefig(tmp_img.name, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
-    # placement du graphique sous le tableau
     pdf.ln(3)
     pdf.image(tmp_img.name, x=10, w=180)
 
