@@ -275,4 +275,4 @@ if summary is not None:
             label="📄 Download PDF",
             data=f,
             file_name=f"{model}_{odf}_dashboard.pdf"
-        )
+        ) 
