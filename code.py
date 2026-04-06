@@ -25,23 +25,19 @@ if "odf" not in st.session_state:
 # =========================
 # HEADER
 # =========================
-container_logo = Image.open("conteneur_logo.png")
-stream_logo = Image.open("stream_logo.png")
-
 col1, col2, col3 = st.columns([1, 5, 1])
 
 with col1:
-    st.image(container_logo, width=400)
+    st.write("📦")
 
 with col2:
     st.title("Container Filling Industrial Dashboard")
-    st.caption("Supply Chain Analysis - BOM & Packing Control")
 
 with col3:
-    st.image(stream_logo, width=800)
+    st.write("📊")
 
 # =========================
-# INPUT FIELDS (IMPORTANT)
+# INPUT FIELDS
 # =========================
 st.markdown("### 📦 Study Information")
 
@@ -82,7 +78,7 @@ if file is not None:
     st.dataframe(df)
 
     # =========================
-    # DETECT CBM
+    # DETECT CBM COLUMN
     # =========================
     cbm_col = None
     for col in df.columns:
@@ -95,7 +91,7 @@ if file is not None:
     else:
 
         # =========================
-        # GROUP
+        # GROUP DATA
         # =========================
         summary = df.groupby(
             ["CONTAINER NO", "CTNER.SIZE"], as_index=False
@@ -134,14 +130,14 @@ if file is not None:
         # =========================
         st.subheader("📈 Filling Rate Chart")
 
-        fig, ax = plt.subplots(figsize=(7, 3))
+        fig, ax = plt.subplots()
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
         ax.axhline(70, linestyle="--")
 
         st.pyplot(fig)
 
 # =========================
-# DOWNLOAD EXCEL (TOUJOURS VISIBLE)
+# 📥 DOWNLOAD EXCEL
 # =========================
 if summary is not None:
 
@@ -155,29 +151,49 @@ if summary is not None:
     )
 
 # =========================
-# PDF EXPORT (OPTIONNEL)
+# 📄 PDF AVEC TABLEAU
 # =========================
 if summary is not None:
 
-    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png").name
-    fig.savefig(tmp_img, bbox_inches="tight")
-
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 12)
 
+    pdf.set_font("Arial", "B", 10)
     pdf.cell(200, 10, txt=full_title, ln=True, align="C")
 
     pdf.ln(5)
 
-    pdf.image(tmp_img, w=180)
+    # ===== HEADER TABLE =====
+    pdf.set_font("Arial", "B", 7)
 
-    pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    pdf.output(pdf_file.name)
+    col_width = 25
 
-    with open(pdf_file.name, "rb") as f:
+    for col in summary.columns:
+        pdf.cell(col_width, 8, col, border=1)
+
+    pdf.ln()
+
+    # ===== TABLE DATA =====
+    pdf.set_font("Arial", "", 7)
+
+    for index, row in summary.iterrows():
+        for col in summary.columns:
+            val = row[col]
+
+            if isinstance(val, float):
+                val = round(val, 2)
+
+            pdf.cell(col_width, 8, str(val), border=1)
+
+        pdf.ln()
+
+    # ===== SAVE PDF =====
+    tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    pdf.output(tmp_pdf.name)
+
+    with open(tmp_pdf.name, "rb") as f:
         st.download_button(
-            label="📄 Download PDF",
+            label="📄 Download PDF with Table",
             data=f,
             file_name="container_dashboard.pdf"
         )
