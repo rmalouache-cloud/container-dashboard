@@ -62,7 +62,7 @@ else:
 st.subheader(full_title)
 
 # =========================
-# UPLOAD
+# UPLOAD FILE
 # =========================
 file = st.file_uploader("Upload Packing Excel file", type=["xlsx"])
 
@@ -143,10 +143,14 @@ if file is not None:
         # =========================
         st.subheader("📈 Filling Rate Chart")
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(8, 4))
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
         ax.axhline(70, linestyle="--")
+        ax.set_title("Filling Rate (%)")
+        ax.set_ylabel("%")
+        ax.set_xlabel("Container")
 
+        fig.tight_layout()
         st.pyplot(fig)
 
 # =========================
@@ -171,21 +175,26 @@ if summary is not None:
     pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.add_page()
 
-    # ===== LOGO =====
-    logo_path = "logo.png"  # 🔴 change path
+    # =========================
+    # LOGO + HEADER (ENTETE)
+    # =========================
+    logo_path = "logo.png"  # 🔴 TON LOGO ICI
 
     try:
-        pdf.image(logo_path, x=10, y=8, w=30)
+        pdf.image(logo_path, x=10, y=5, w=30)
     except:
         pass
 
-    # ===== TITLE =====
     pdf.set_font("Arial", "B", 14)
+
+    # Title centered
     pdf.cell(0, 10, full_title, ln=True, align="C")
 
     pdf.ln(10)
 
-    # ===== TABLE HEADER =====
+    # =========================
+    # TABLE HEADER
+    # =========================
     pdf.set_font("Arial", "B", 8)
 
     col_width = 270 / len(summary.columns)
@@ -195,7 +204,9 @@ if summary is not None:
 
     pdf.ln()
 
-    # ===== TABLE DATA =====
+    # =========================
+    # TABLE DATA (COLOR STATUS)
+    # =========================
     pdf.set_font("Arial", "", 8)
 
     for _, row in summary.iterrows():
@@ -205,7 +216,6 @@ if summary is not None:
             if isinstance(val, float):
                 val = f"{val:.2f}"
 
-            # COLOR STATUS
             if col == "STATUS":
                 if val == "OK":
                     pdf.set_text_color(0, 128, 0)
@@ -220,13 +230,23 @@ if summary is not None:
 
     pdf.ln(5)
 
-    # ===== ADD CHART =====
+    # =========================
+    # SAVE CHART IMAGE
+    # =========================
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    fig.savefig(tmp_img.name)
 
+    fig.savefig(tmp_img.name, dpi=300, bbox_inches="tight")
+
+    tmp_img.close()
+
+    # =========================
+    # ADD CHART TO PDF
+    # =========================
     pdf.image(tmp_img.name, x=10, w=250)
 
-    # ===== SAVE PDF =====
+    # =========================
+    # SAVE PDF
+    # =========================
     tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(tmp_pdf.name)
 
