@@ -94,7 +94,7 @@ if file is not None:
         )
 
         st.subheader("📊 Result Table")
-        st.dataframe(summary)
+        _ = st.dataframe(summary)
 
         # =========================
         # DIAGRAMME
