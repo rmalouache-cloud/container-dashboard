@@ -172,7 +172,7 @@ if summary is not None:
 # =========================
 if summary is not None:
 
-    pdf = FPDF(orientation="L", unit="mm", format="A4")
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.add_page()
 
     # ===== HEADER (LOGO LEFT + RIGHT) =====
