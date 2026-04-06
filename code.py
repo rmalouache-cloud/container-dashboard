@@ -3,7 +3,7 @@ import io
 # =========================
 # PDF
 # =========================
-if summary is not None:
+if "summary" in locals() and summary is not None:
 
     pdf = FPDF("P", "mm", "A4")
     pdf.add_page()
