@@ -177,7 +177,7 @@ if summary is not None:
     logo_path = "entete.PNG"
 
     if os.path.exists(logo_path):
-        pdf.image(logo_path, x=0, y=0, w=210, h=30)  # taille + position
+        pdf.image(logo_path, x=0, y=0, w=210, h=25)  # taille + position
 
     # =========================
     # TITLE
@@ -243,7 +243,7 @@ if summary is not None:
     fig, ax = plt.subplots(figsize=(6, 3))
 
     ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-    ax.axhline(70, linestyle="--")
+    ax.axhline(70, color='red', linestyle='--', linewidth=2)
     ax.set_title("Filling Rate (%)")
     ax.set_ylabel("%")
 
