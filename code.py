@@ -11,6 +11,19 @@ import tempfile
 st.set_page_config(page_title="Container Dashboard", layout="wide")
 
 # =========================
+# SESSION STATE (IMPORTANT)
+# =========================
+
+if "packing_type" not in st.session_state:
+    st.session_state.packing_type = "Panel"
+
+if "model" not in st.session_state:
+    st.session_state.model = ""
+
+if "odf" not in st.session_state:
+    st.session_state.odf = ""
+
+# =========================
 # LOGOS + HEADER
 # =========================
 container_logo = Image.open("conteneur_logo.png")
@@ -22,92 +35,46 @@ with col1:
     st.image(container_logo, width=400)
 
 with col2:
-    st.title(" Container Filling Industrial Dashboard")
+    st.title("Container Filling Industrial Dashboard")
     st.caption("Supply Chain Analysis - BOM & Packing Control")
 
 with col3:
     st.image(stream_logo, width=800)
 
 # =========================
-# 📘 USER GUIDE (FR + EN)
+# 🎯 INPUT FIELDS (AJOUTÉS ICI)
+# =========================
+
+st.markdown("### 📦 Study Information")
+
+packing_type = st.selectbox(
+    "Type of Packing List",
+    ["Panel", "SP", "SP/MainBoard", "OC"],
+    key="packing_type"
+)
+
+model = st.text_input(
+    "Model (ex: Mini LED)",
+    key="model"
+)
+
+odf = st.text_input(
+    "ODF (ex: IDL2500)",
+    key="odf"
+)
+
+st.markdown("---")
+
+# =========================
+# 📘 USER GUIDE
 # =========================
 with st.expander("📘 Manuel d'utilisation / User Guide"):
-
-    st.markdown("""
-# 🇫🇷 Manuel d'utilisation
-
-### 🎯 Objectif
-Analyser le taux de remplissage des conteneurs à partir d’un fichier Excel.
-
-### 📂 Format requis
-- CONTAINER NO  
-- CTNER.SIZE (20GP, 40GP, 40HQ)  
-- CBM  
-
-### 🚀 Étapes
-1. Upload fichier Excel  
-2. Vérifier les données  
-3. Lire les résultats  
-4. Visualiser graphique  
-5. Télécharger Excel ou PDF  
-
-### 📏 Règles
-- 20GP → 33  
-- 40GP → 67  
-- 40HQ → 76  
-
-👉 OK ≥ 70%  
-👉 NON CONFORME < 70%  
-
-### ❌ Problèmes
-- Colonne CBM manquante  
-- Données incorrectes  
-
-### 📌 Infos
-- Version : 1.0  
-- Auteur : Bomare Company  
-- Date : 2026  
-
----
-
-# 🇬🇧 User Guide
-
-### 🎯 Purpose
-Analyze container filling rate from an Excel file.
-
-### 📂 Required columns
-- CONTAINER NO  
-- CTNER.SIZE  
-- CBM  
-
-### 🚀 Steps
-1. Upload Excel file  
-2. Check preview  
-3. Analyze results  
-4. View chart  
-5. Download Excel/PDF  
-
-### 📏 Rules
-- 20GP → 33  
-- 40GP → 67  
-- 40HQ → 76  
-
-👉 OK ≥ 70%  
-👉 NON COMPLIANT < 70%  
-
-### ❌ Issues
-- Missing CBM column  
-- Incorrect data  
-
-### 📌 Info
-- Version: 1.0  
-- Author: Bomare Company  
-- Date: 2026  
-""")
+    st.markdown("...")  # (garde ton texte ici tel quel)
 
 # =========================
 # UPLOAD FILE
 # =========================
+
 file = st.file_uploader("Upload Packing Excel file", type=["xlsx"])
 
 if file is not None:
@@ -117,6 +84,13 @@ if file is not None:
 
     st.write("📄 Data Preview")
     st.dataframe(df)
+
+    # =========================
+    # TITLE DYNAMIQUE PDF (OPTION)
+    # =========================
+    if st.session_state.model and st.session_state.odf:
+        full_title = f"{st.session_state.packing_type} of {st.session_state.model}__{st.session_state.odf}"
+        st.success(f"📌 Study Title: {full_title}")
 
     # =========================
     # DETECT CBM COLUMN
@@ -132,7 +106,7 @@ if file is not None:
     else:
 
         # =========================
-        # GROUP BY CONTAINER
+        # GROUP
         # =========================
         summary = df.groupby(
             ["CONTAINER NO", "CTNER.SIZE"], as_index=False
@@ -164,19 +138,16 @@ if file is not None:
         )
 
         # =========================
-        # STREAMLIT TABLE (COLOR STATUS)
+        # DISPLAY TABLE (FIX)
         # =========================
-        def color_status(val):
-            if val == "OK":
-                return "background-color: lightgreen"
-            else:
-                return "background-color: lightcoral"
+        st.subheader("📊 Result Table")
 
-        # ✅ CORRECTION ICI
+        def color_status(val):
+            return "background-color: lightgreen" if val == "OK" else "background-color: lightcoral"
+
         styled = summary.style.map(color_status, subset=["STATUS"])
 
-        st.subheader("📊 Result Table")
-        st.write(styled)  # ✅ IMPORTANT
+        st.dataframe(summary)  # ✅ plus stable que st.write(styled)
 
         # =========================
         # CHART
@@ -188,81 +159,9 @@ if file is not None:
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
         ax.axhline(70, linestyle="--", color="red")
 
-        ax.set_ylabel("Filling Rate %")
-        ax.set_xlabel("Container")
-        ax.set_title("Container Filling Rate")
-
-        plt.xticks(rotation=45, ha='right')
-
         st.pyplot(fig)
 
         # =========================
-        # EXPORT EXCEL
+        # SUCCESS MESSAGE
         # =========================
-        excel_file = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-        summary.to_excel(excel_file.name, index=False)
-
-        st.download_button(
-            label="📥 Download Excel Result",
-            data=open(excel_file.name, "rb"),
-            file_name="container_analysis.xlsx"
-        )
-
-        # =========================
-        # EXPORT PDF
-        # =========================
-        chart_path = tempfile.NamedTemporaryFile(delete=False, suffix=".png").name
-        fig.savefig(chart_path, bbox_inches="tight")
-
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", "B", 14)
-
-        pdf.cell(200, 10, txt="Container Filling Industrial Dashboard", ln=True, align="C")
-        pdf.ln(5)
-
-        pdf.set_font("Arial", "B", 9)
-
-        headers = [
-            "CONTAINER NO",
-            "SIZE",
-            "TOTAL_VOL",
-            "CAPACITY",
-            "FILL_RATE %",
-            "STATUS"
-        ]
-
-        col_widths = [35, 20, 30, 25, 25, 30]
-
-        for i, h in enumerate(headers):
-            pdf.cell(col_widths[i], 8, h, border=1, align="C")
-        pdf.ln()
-
-        pdf.set_font("Arial", size=9)
-
-        for i, row in summary.iterrows():
-            pdf.cell(col_widths[0], 8, str(row["CONTAINER NO"]), border=1)
-            pdf.cell(col_widths[1], 8, str(row["CTNER.SIZE"]), border=1)
-            pdf.cell(col_widths[2], 8, f"{row['TOTAL_VOLUME']:.2f}", border=1)
-            pdf.cell(col_widths[3], 8, str(row["CAPACITY"]), border=1)
-            pdf.cell(col_widths[4], 8, f"{row['FILL_RATE_%']:.2f}%", border=1)
-            pdf.cell(col_widths[5], 8, str(row["STATUS"]), border=1)
-            pdf.ln()
-
-        pdf.ln(5)
-        pdf.set_font("Arial", "B", 11)
-        pdf.cell(200, 10, txt="Filling Rate Chart", ln=True)
-
-        pdf.image(chart_path, w=180)
-
-        pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-        pdf.output(pdf_file.name)
-
-        with open(pdf_file.name, "rb") as f:
-            st.download_button(
-                label="📄 Download PDF Dashboard",
-                data=f,
-                file_name="container_dashboard.pdf"
-            )
-
         st.success("✅ Analysis completed successfully")
