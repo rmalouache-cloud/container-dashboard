@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from PIL import Image
 from fpdf import FPDF
 import tempfile
 
@@ -37,7 +36,7 @@ with col3:
     st.write("📊")
 
 # =========================
-# INPUT FIELDS
+# INPUTS
 # =========================
 st.markdown("### 📦 Study Information")
 
@@ -53,10 +52,10 @@ odf = st.text_input("ODF (ex: IDL2500)", key="odf")
 st.markdown("---")
 
 # =========================
-# DYNAMIC TITLE
+# TITLE
 # =========================
-if st.session_state.model and st.session_state.odf:
-    full_title = f"Container Filling Industrial Dashboard of {st.session_state.packing_type} of {st.session_state.model}__{st.session_state.odf}"
+if model and odf:
+    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{odf}"
 else:
     full_title = "Container Filling Industrial Dashboard"
 
@@ -78,7 +77,7 @@ if file is not None:
     st.dataframe(df)
 
     # =========================
-    # DETECT CBM COLUMN
+    # CBM COLUMN
     # =========================
     cbm_col = None
     for col in df.columns:
@@ -91,7 +90,7 @@ if file is not None:
     else:
 
         # =========================
-        # GROUP DATA
+        # GROUP
         # =========================
         summary = df.groupby(
             ["CONTAINER NO", "CTNER.SIZE"], as_index=False
@@ -123,15 +122,18 @@ if file is not None:
         )
 
         # =========================
-        # COLOR DISPLAY TABLE
+        # COLOR TABLE STREAMLIT
         # =========================
-        def color_status(val):
+        def highlight_status(val):
             if val == "OK":
                 return "background-color: lightgreen"
-            else:
+            elif val == "NON CONFORME":
                 return "background-color: lightcoral"
+            return ""
 
-        styled_df = summary.style.applymap(color_status, subset=["STATUS"])
+        styled_df = summary.style.applymap(
+            highlight_status
+        )
 
         st.subheader("📊 Result Table")
         st.dataframe(styled_df)
@@ -148,7 +150,7 @@ if file is not None:
         st.pyplot(fig)
 
 # =========================
-# 📥 DOWNLOAD EXCEL
+# EXCEL DOWNLOAD
 # =========================
 if summary is not None:
 
@@ -162,7 +164,7 @@ if summary is not None:
     )
 
 # =========================
-# 📄 PDF WITH LOGO + TABLE + CHART
+# PDF GENERATION
 # =========================
 if summary is not None:
 
@@ -170,7 +172,7 @@ if summary is not None:
     pdf.add_page()
 
     # ===== LOGO =====
-    logo_path = "logo.png"  # <-- mets ton logo ici
+    logo_path = "logo.png"  # 🔴 change ici
 
     try:
         pdf.image(logo_path, x=10, y=8, w=30)
@@ -197,7 +199,7 @@ if summary is not None:
     pdf.ln()
 
     # =========================
-    # TABLE CONTENT (WITH COLORS)
+    # TABLE CONTENT (COLOR STATUS)
     # =========================
     pdf.set_font("Arial", "", 8)
 
@@ -208,7 +210,7 @@ if summary is not None:
             if isinstance(val, float):
                 val = f"{val:.2f}"
 
-            # Color for STATUS
+            # COLOR STATUS
             if col == "STATUS":
                 if val == "OK":
                     pdf.set_text_color(0, 128, 0)  # green
@@ -224,7 +226,7 @@ if summary is not None:
     pdf.ln(5)
 
     # =========================
-    # ADD CHART TO PDF
+    # ADD CHART IMAGE
     # =========================
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     fig.savefig(tmp_img.name)
