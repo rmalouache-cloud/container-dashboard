@@ -156,7 +156,9 @@ if file is not None:
         # =========================
         summary["FILL_RATE_%"] = summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
 
-        # ✅ CONDITION FIXÉE À 70%
+        # =========================
+        # STATUS
+        # =========================
         summary["STATUS"] = summary["FILL_RATE_%"].apply(
             lambda x: "OK" if x >= 70 else "NON CONFORME"
         )
@@ -170,10 +172,11 @@ if file is not None:
             else:
                 return "background-color: lightcoral"
 
-        styled = summary.style.applymap(color_status, subset=["STATUS"])
+        # ✅ CORRECTION ICI
+        styled = summary.style.map(color_status, subset=["STATUS"])
 
         st.subheader("📊 Result Table")
-        st.dataframe(styled)
+        st.write(styled)  # ✅ IMPORTANT
 
         # =========================
         # CHART
@@ -183,7 +186,7 @@ if file is not None:
         fig, ax = plt.subplots(figsize=(7, 3))
 
         ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-        ax.axhline(70, linestyle="--", color="red")  # seuil 70%
+        ax.axhline(70, linestyle="--", color="red")
 
         ax.set_ylabel("Filling Rate %")
         ax.set_xlabel("Container")
