@@ -90,7 +90,7 @@ if file is not None:
     else:
 
         # =========================
-        # GROUP
+        # GROUP DATA
         # =========================
         summary = df.groupby(
             ["CONTAINER NO", "CTNER.SIZE"], as_index=False
@@ -122,9 +122,9 @@ if file is not None:
         )
 
         # =========================
-        # COLOR TABLE STREAMLIT
+        # COLOR TABLE (STREAMLIT)
         # =========================
-        def highlight_status(val):
+        def color_status(val):
             if val == "OK":
                 return "background-color: lightgreen"
             elif val == "NON CONFORME":
@@ -132,7 +132,7 @@ if file is not None:
             return ""
 
         styled_df = summary.style.applymap(
-            highlight_status
+            lambda v: color_status(v)
         )
 
         st.subheader("📊 Result Table")
@@ -199,7 +199,7 @@ if summary is not None:
     pdf.ln()
 
     # =========================
-    # TABLE CONTENT (COLOR STATUS)
+    # TABLE CONTENT (COLORS)
     # =========================
     pdf.set_font("Arial", "", 8)
 
@@ -226,7 +226,7 @@ if summary is not None:
     pdf.ln(5)
 
     # =========================
-    # ADD CHART IMAGE
+    # ADD CHART
     # =========================
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     fig.savefig(tmp_img.name)
