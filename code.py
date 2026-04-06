@@ -46,15 +46,15 @@ packing_type = st.selectbox(
 )
 
 model = st.text_input("Model")
-odf = st.text_input("ODF")
+BL No = st.text_input("BL No")
 
 st.markdown("---")
 
 # =========================
 # TITLE
 # =========================
-if model and odf:
-    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{odf}"
+if model and BL No:
+    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{BL No}"
 else:
     full_title = "Container Filling Industrial Dashboard"
 
@@ -195,6 +195,6 @@ if summary is not None:
     st.download_button(
         label="📄 Download PDF",
         data=pdf_bytes,
-        file_name=f"{model}_{odf}_dashboard.pdf",
+        file_name=f"{model}_{BL No}_dashboard.pdf",
         mime="application/pdf"
     )
