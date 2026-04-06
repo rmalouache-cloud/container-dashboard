@@ -151,49 +151,55 @@ if summary is not None:
     )
 
 # =========================
-# 📄 PDF AVEC TABLEAU
+# 📄 PDF AVEC TITRE DYNAMIQUE
 # =========================
+
 if summary is not None:
 
-    pdf = FPDF()
+    pdf = FPDF(orientation="L", unit="mm", format="A4")
     pdf.add_page()
 
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(200, 10, txt=full_title, ln=True, align="C")
+    # ===== DYNAMIC TITLE =====
+    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{odf}"
+
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, full_title, ln=True, align="C")
 
     pdf.ln(5)
 
-    # ===== HEADER TABLE =====
-    pdf.set_font("Arial", "B", 7)
+    # ===== TABLE =====
+    pdf.set_font("Arial", "B", 9)
 
-    col_width = 25
+    page_width = 270
+    col_width = page_width / len(summary.columns)
 
+    # HEADER
     for col in summary.columns:
-        pdf.cell(col_width, 8, col, border=1)
+        pdf.cell(col_width, 8, str(col), border=1, align="C")
 
     pdf.ln()
 
-    # ===== TABLE DATA =====
-    pdf.set_font("Arial", "", 7)
+    # CONTENT
+    pdf.set_font("Arial", "", 8)
 
-    for index, row in summary.iterrows():
+    for _, row in summary.iterrows():
         for col in summary.columns:
             val = row[col]
 
             if isinstance(val, float):
-                val = round(val, 2)
+                val = f"{val:.2f}"
 
-            pdf.cell(col_width, 8, str(val), border=1)
+            pdf.cell(col_width, 8, str(val), border=1, align="C")
 
         pdf.ln()
 
-    # ===== SAVE PDF =====
+    # ===== SAVE =====
     tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(tmp_pdf.name)
 
     with open(tmp_pdf.name, "rb") as f:
         st.download_button(
-            label="📄 Download PDF with Table",
+            label="📄 Download PDF",
             data=f,
-            file_name="container_dashboard.pdf"
+            file_name=f"{model}_{odf}_dashboard.pdf"
         )
