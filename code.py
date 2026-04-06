@@ -62,7 +62,7 @@ else:
 st.subheader(full_title)
 
 # =========================
-# UPLOAD FILE
+# UPLOAD
 # =========================
 file = st.file_uploader("Upload Packing Excel file", type=["xlsx"])
 
@@ -77,7 +77,7 @@ if file is not None:
     st.dataframe(df)
 
     # =========================
-    # CBM COLUMN
+    # FIND CBM COLUMN
     # =========================
     cbm_col = None
     for col in df.columns:
@@ -90,7 +90,7 @@ if file is not None:
     else:
 
         # =========================
-        # GROUP DATA
+        # GROUP
         # =========================
         summary = df.groupby(
             ["CONTAINER NO", "CTNER.SIZE"], as_index=False
@@ -112,7 +112,9 @@ if file is not None:
         # =========================
         # FILL RATE
         # =========================
-        summary["FILL_RATE_%"] = summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
+        summary["FILL_RATE_%"] = (
+            summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
+        )
 
         # =========================
         # STATUS
@@ -124,16 +126,14 @@ if file is not None:
         # =========================
         # COLOR TABLE (STREAMLIT)
         # =========================
-        def color_status(val):
+        def highlight_status(val):
             if val == "OK":
                 return "background-color: lightgreen"
             elif val == "NON CONFORME":
                 return "background-color: lightcoral"
             return ""
 
-        styled_df = summary.style.applymap(
-            lambda v: color_status(v)
-        )
+        styled_df = summary.style.map(highlight_status, subset=["STATUS"])
 
         st.subheader("📊 Result Table")
         st.dataframe(styled_df)
@@ -172,7 +172,7 @@ if summary is not None:
     pdf.add_page()
 
     # ===== LOGO =====
-    logo_path = "logo.png"  # 🔴 change ici
+    logo_path = "logo.png"  # 🔴 change path
 
     try:
         pdf.image(logo_path, x=10, y=8, w=30)
@@ -185,22 +185,17 @@ if summary is not None:
 
     pdf.ln(10)
 
-    # =========================
-    # TABLE HEADER
-    # =========================
+    # ===== TABLE HEADER =====
     pdf.set_font("Arial", "B", 8)
 
-    page_width = 270
-    col_width = page_width / len(summary.columns)
+    col_width = 270 / len(summary.columns)
 
     for col in summary.columns:
         pdf.cell(col_width, 8, str(col), border=1, align="C")
 
     pdf.ln()
 
-    # =========================
-    # TABLE CONTENT (COLORS)
-    # =========================
+    # ===== TABLE DATA =====
     pdf.set_font("Arial", "", 8)
 
     for _, row in summary.iterrows():
@@ -213,9 +208,9 @@ if summary is not None:
             # COLOR STATUS
             if col == "STATUS":
                 if val == "OK":
-                    pdf.set_text_color(0, 128, 0)  # green
+                    pdf.set_text_color(0, 128, 0)
                 else:
-                    pdf.set_text_color(255, 0, 0)  # red
+                    pdf.set_text_color(255, 0, 0)
             else:
                 pdf.set_text_color(0, 0, 0)
 
@@ -225,17 +220,13 @@ if summary is not None:
 
     pdf.ln(5)
 
-    # =========================
-    # ADD CHART
-    # =========================
+    # ===== ADD CHART =====
     tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     fig.savefig(tmp_img.name)
 
     pdf.image(tmp_img.name, x=10, w=250)
 
-    # =========================
-    # SAVE PDF
-    # =========================
+    # ===== SAVE PDF =====
     tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(tmp_pdf.name)
 
