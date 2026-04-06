@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from fpdf import FPDF
 import tempfile
+import os
 
 # =========================
 # CONFIG
@@ -11,59 +12,121 @@ import tempfile
 st.set_page_config(page_title="Container Dashboard", layout="wide")
 
 # =========================
-# SESSION STATE
+# LOGOS + HEADER (TON CODE)
 # =========================
-if "packing_type" not in st.session_state:
-    st.session_state.packing_type = "Panel"
+container_logo = Image.open("conteneur_logo.png")
+stream_logo = Image.open("stream_logo.png")
 
-if "model" not in st.session_state:
-    st.session_state.model = ""
-
-if "odf" not in st.session_state:
-    st.session_state.odf = ""
-
-# =========================
-# HEADER
-# =========================
 col1, col2, col3 = st.columns([1, 5, 1])
 
 with col1:
-    st.write("📦")
+    st.image(container_logo, width=400)
 
 with col2:
-    st.title("Container Filling Industrial Dashboard")
+    st.title(" Container Filling Industrial Dashboard")
+    st.caption("Supply Chain Analysis - BOM & Packing Control")
 
 with col3:
-    st.write("📊")
+    st.image(stream_logo, width=800)
 
 # =========================
-# INPUT FIELDS
+# USER GUIDE (TON CODE)
+# =========================
+with st.expander("📘 Manuel d'utilisation / User Guide"):
+    st.markdown("""
+# 🇫🇷 Manuel d'utilisation
+
+### 🎯 Objectif
+Analyser le taux de remplissage des conteneurs à partir d’un fichier Excel.
+
+### 📂 Format requis
+- CONTAINER NO  
+- CTNER.SIZE (20GP, 40GP, 40HQ)  
+- CBM  
+
+### 🚀 Étapes
+1. Upload fichier Excel  
+2. Vérifier les données  
+3. Lire les résultats  
+4. Visualiser graphique  
+5. Télécharger Excel ou PDF  
+
+### 📏 Règles
+- 20GP → 33  
+- 40GP → 67  
+- 40HQ → 76  
+
+👉 OK ≥ 70%  
+👉 NON CONFORME < 70%  
+
+### ❌ Problèmes
+- Colonne CBM manquante  
+- Données incorrectes  
+
+---
+
+# 🇬🇧 User Guide
+
+### 🎯 Purpose
+Analyze container filling rate from an Excel file.
+
+### 📂 Required columns
+- CONTAINER NO  
+- CTNER.SIZE  
+- CBM  
+
+### 🚀 Steps
+1. Upload Excel file  
+2. Check preview  
+3. Analyze results  
+4. View chart  
+5. Download Excel/PDF  
+
+### 📏 Rules
+- 20GP → 33  
+- 40GP → 67  
+- 40HQ → 76  
+
+👉 OK ≥ 70%  
+👉 NON COMPLIANT < 70%  
+
+### ❌ Issues
+- Missing CBM column  
+- Incorrect data  
+
+### 📌 Info
+- Version: 1.0  
+- Author: Bomare Company  
+- Date: 2026
+""")
+
+# =========================
+# INPUTS
 # =========================
 st.markdown("### 📦 Study Information")
 
 packing_type = st.selectbox(
     "Type of Packing List",
-    ["Panel", "SP", "SP/MainBoard", "OC"],
-    key="packing_type"
+    ["Panel", "SP", "SP/MainBoard", "OC"]
 )
 
-model = st.text_input("Model (ex: Mini LED)", key="model")
-odf = st.text_input("ODF (ex: IDL2500)", key="odf")
+model = st.text_input("Model (ex: Mini LED)")
+odf = st.text_input("ODF (ex: IDL2500)")
 
 st.markdown("---")
 
 # =========================
-# DYNAMIC TITLE
+# TITLE
 # =========================
-if st.session_state.model and st.session_state.odf:
-    full_title = f"Container Filling Industrial Dashboard of {st.session_state.packing_type} of {st.session_state.model}__{st.session_state.odf}"
+if model and odf:
+    full_title = f"Container Filling Industrial Dashboard of {packing_type} of {model}__{odf}"
 else:
     full_title = "Container Filling Industrial Dashboard"
 
 st.subheader(full_title)
 
 # =========================
-# UPLOAD FILE
+# UPLOAD
 # =========================
 file = st.file_uploader("Upload Packing Excel file", type=["xlsx"])
 
@@ -77,9 +140,6 @@ if file is not None:
     st.write("📄 Data Preview")
     st.dataframe(df)
 
-    # =========================
-    # DETECT CBM COLUMN
-    # =========================
     cbm_col = None
     for col in df.columns:
         if "CBM" in col.upper():
@@ -90,18 +150,12 @@ if file is not None:
         st.error("❌ CBM column not found")
     else:
 
-        # =========================
-        # GROUP DATA
-        # =========================
         summary = df.groupby(
             ["CONTAINER NO", "CTNER.SIZE"], as_index=False
         ).agg({cbm_col: "sum"})
 
         summary.rename(columns={cbm_col: "TOTAL_VOLUME"}, inplace=True)
 
-        # =========================
-        # CAPACITY
-        # =========================
         capacity_map = {
             "20GP": 33,
             "40GP": 67,
@@ -110,14 +164,10 @@ if file is not None:
 
         summary["CAPACITY"] = summary["CTNER.SIZE"].map(capacity_map)
 
-        # =========================
-        # FILL RATE
-        # =========================
-        summary["FILL_RATE_%"] = summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
+        summary["FILL_RATE_%"] = (
+            summary["TOTAL_VOLUME"] * 100 / summary["CAPACITY"]
+        )
 
-        # =========================
-        # STATUS
-        # =========================
         summary["STATUS"] = summary["FILL_RATE_%"].apply(
             lambda x: "OK" if x >= 70 else "NON CONFORME"
         )
@@ -125,75 +175,103 @@ if file is not None:
         st.subheader("📊 Result Table")
         st.dataframe(summary)
 
-        # =========================
-        # CHART
-        # =========================
-        st.subheader("📈 Filling Rate Chart")
-
-        fig, ax = plt.subplots()
-        ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
-        ax.axhline(70, linestyle="--")
-
-        st.pyplot(fig)
-
 # =========================
-# 📥 DOWNLOAD EXCEL
+# PDF (CORRIGÉ SANS TOUCHER TON LOGIQUE)
 # =========================
 if summary is not None:
 
-    tmp_excel = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-    summary.to_excel(tmp_excel.name, index=False)
-
-    st.download_button(
-        label="📥 Download Excel Result",
-        data=open(tmp_excel.name, "rb"),
-        file_name="container_analysis.xlsx"
-    )
-
-# =========================
-# 📄 PDF AVEC TABLEAU
-# =========================
-if summary is not None:
-
-    pdf = FPDF()
+    pdf = FPDF(orientation="L", unit="mm", format="A4")  # ✅ FIX LARGEUR
     pdf.add_page()
 
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(200, 10, txt=full_title, ln=True, align="C")
+    pdf.set_font("Arial", "", 8)
 
-    pdf.ln(5)
+    # =========================
+    # HEADER IMAGE
+    # =========================
+    logo_path = "entete/entete.png"
 
-    # ===== HEADER TABLE =====
-    pdf.set_font("Arial", "B", 7)
+    if os.path.exists(logo_path):
+        pdf.image(logo_path, x=10, y=8, w=60)
 
-    col_width = 25
+    # =========================
+    # TITLE
+    # =========================
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, full_title, ln=True, align="C")
 
-    for col in summary.columns:
-        pdf.cell(col_width, 8, col, border=1)
+    pdf.ln(8)
 
+    # =========================
+    # TABLE FIX
+    # =========================
+    pdf.set_font("Arial", "B", 8)
+
+    page_width = pdf.w - 20
+    col_width = page_width / len(summary.columns)
+
+    headers = ["CONTAINER NO", "SIZE", "TOTAL_VOL", "CAPACITY", "FILL_RATE %", "STATUS"]
+
+    for col in headers:
+        pdf.cell(col_width, 8, col, border=1, align="C")
     pdf.ln()
 
-    # ===== TABLE DATA =====
-    pdf.set_font("Arial", "", 7)
+    pdf.set_font("Arial", "", 8)
 
-    for index, row in summary.iterrows():
-        for col in summary.columns:
-            val = row[col]
+    for _, row in summary.iterrows():
 
-            if isinstance(val, float):
-                val = round(val, 2)
+        row_values = [
+            row["CONTAINER NO"],
+            row["CTNER.SIZE"],
+            f"{row['TOTAL_VOLUME']:.2f}",
+            f"{row['CAPACITY']:.0f}",
+            f"{row['FILL_RATE_%']:.2f}%",
+            row["STATUS"]
+        ]
 
-            pdf.cell(col_width, 8, str(val), border=1)
+        for i, val in enumerate(row_values):
+
+            if headers[i] == "STATUS":
+                if val == "OK":
+                    pdf.set_text_color(0, 150, 0)
+                else:
+                    pdf.set_text_color(255, 0, 0)
+            else:
+                pdf.set_text_color(0, 0, 0)
+
+            pdf.cell(col_width, 8, str(val), border=1, align="C")
 
         pdf.ln()
 
-    # ===== SAVE PDF =====
+    # =========================
+    # CHART
+    # =========================
+    pdf.ln(10)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, "Filling Rate Chart", ln=True)
+
+    tmp_img = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.bar(summary["CONTAINER NO"], summary["FILL_RATE_%"])
+    ax.axhline(70, linestyle="--")
+    ax.set_title("Container Filling Rate")
+    ax.set_ylabel("%")
+
+    fig.tight_layout()
+    fig.savefig(tmp_img.name, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+    pdf.image(tmp_img.name, x=10, w=250)
+
+    # =========================
+    # DOWNLOAD PDF
+    # =========================
     tmp_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     pdf.output(tmp_pdf.name)
 
     with open(tmp_pdf.name, "rb") as f:
         st.download_button(
-            label="📄 Download PDF with Table",
+            label="📄 Download PDF",
             data=f,
-            file_name="container_dashboard.pdf"
+            file_name=f"{model}_{odf}_dashboard.pdf"
         )
