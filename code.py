@@ -86,38 +86,61 @@ def create_chart(data, container_col, fill_rate_col, threshold=FILL_RATE_THRESHO
     return fig
 
 def display_metrics(summary):
-    """Affiche les métriques principales dans des cartes stylisées"""
+    """Affiche les métriques principales dans des cartes stylisées avec couleurs différentes"""
     col1, col2, col3, col4 = st.columns(4)
     
-    # Style CSS personnalisé pour les cartes
+    # Style CSS personnalisé pour les cartes avec différentes couleurs
     st.markdown("""
         <style>
-        .metric-card {
-            background-color: #f8f9fa;
+        .metric-card-1 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 10px;
             padding: 15px;
             text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-left: 4px solid #2ecc71;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: white;
+        }
+        .metric-card-2 {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: white;
+        }
+        .metric-card-3 {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: white;
+        }
+        .metric-card-4 {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            color: white;
         }
         .metric-value {
             font-size: 28px;
             font-weight: bold;
-            color: #2c3e50;
             margin: 10px 0;
         }
         .metric-label {
             font-size: 14px;
-            color: #7f8c8d;
             text-transform: uppercase;
             letter-spacing: 1px;
+            opacity: 0.9;
         }
         </style>
     """, unsafe_allow_html=True)
     
     with col1:
         st.markdown(f"""
-            <div class="metric-card">
+            <div class="metric-card-1">
                 <div class="metric-label">📦 TOTAL CONTENEURS</div>
                 <div class="metric-value">{len(summary)}</div>
             </div>
@@ -126,7 +149,7 @@ def display_metrics(summary):
     with col2:
         avg_fill = summary["FILL_RATE_%"].mean()
         st.markdown(f"""
-            <div class="metric-card">
+            <div class="metric-card-2">
                 <div class="metric-label">📊 TAUX MOYEN</div>
                 <div class="metric-value">{avg_fill:.1f}%</div>
             </div>
@@ -135,7 +158,7 @@ def display_metrics(summary):
     with col3:
         compliant = len(summary[summary["FILL_RATE_%"] >= FILL_RATE_THRESHOLD])
         st.markdown(f"""
-            <div class="metric-card">
+            <div class="metric-card-3">
                 <div class="metric-label">✅ CONTENEURS CONFORMES</div>
                 <div class="metric-value">{compliant}/{len(summary)}</div>
             </div>
@@ -145,7 +168,7 @@ def display_metrics(summary):
         total_volume = summary["TOTAL_VOLUME"].sum()
         total_capacity = summary["CAPACITY"].sum()
         st.markdown(f"""
-            <div class="metric-card">
+            <div class="metric-card-4">
                 <div class="metric-label">📐 VOLUME TOTAL</div>
                 <div class="metric-value">{total_volume:.1f} m³</div>
                 <div class="metric-label">Capacité: {total_capacity:.0f} m³</div>
@@ -161,38 +184,45 @@ def create_pdf(summary, full_title, chart_path, model, bl_no):
     logo_path = "entete.PNG"
     if os.path.exists(logo_path):
         pdf.image(logo_path, x=0, y=0, w=210, h=25)
-        pdf.set_y(20)  # Position après le logo
+        pdf.set_y(28)  # Position après le logo + un peu d'espace
     else:
-        pdf.set_y(10)
+        pdf.set_y(15)
     
-    # Titre - directement après le logo
+    # Titre - avec un peu d'espace après le logo
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 8, full_title, ln=True, align="C")
-    pdf.ln(3)
+    pdf.ln(5)
     
     # Métriques dans le PDF (compact)
     pdf.set_font("Arial", "B", 9)
     
     # Première ligne de métriques
-    pdf.set_fill_color(240, 240, 240)
+    pdf.set_fill_color(102, 126, 234)  # Couleur violette
+    pdf.set_text_color(255, 255, 255)
     pdf.cell(95, 7, f"Total Conteneurs: {len(summary)}", border=1, fill=True, align="C")
+    pdf.set_fill_color(240, 147, 251)  # Couleur rose
     pdf.cell(95, 7, f"Taux Moyen: {summary['FILL_RATE_%'].mean():.1f}%", border=1, fill=True, align="C", ln=1)
     
     # Deuxième ligne de métriques
     compliant = len(summary[summary["FILL_RATE_%"] >= FILL_RATE_THRESHOLD])
+    pdf.set_fill_color(79, 172, 254)  # Couleur bleue
     pdf.cell(95, 7, f"Conteneurs Conformes: {compliant}/{len(summary)}", border=1, fill=True, align="C")
+    pdf.set_fill_color(67, 233, 123)  # Couleur verte
     pdf.cell(95, 7, f"Volume Total: {summary['TOTAL_VOLUME'].sum():.1f} m³", border=1, fill=True, align="C", ln=1)
     
+    # Reset text color to black
+    pdf.set_text_color(0, 0, 0)
     pdf.ln(4)
     
-    # Tableau compact (ajusté pour tenir sur une page)
+    # Tableau compact avec colonne STATUS
     pdf.set_font("Arial", "B", 7)
     page_width = pdf.w - 20
-    col_width = page_width / 5
+    col_width = page_width / 6  # 6 colonnes maintenant (incluant STATUS)
     
-    headers = ["CONTAINER NO", "SIZE", "TOTAL VOLUME", "CAPACITY", "FILL RATE"]
+    headers = ["CONTAINER NO", "SIZE", "TOTAL VOLUME", "CAPACITY", "FILL RATE", "STATUS"]
     
     # En-tête du tableau
+    pdf.set_fill_color(200, 200, 200)
     for header in headers:
         pdf.cell(col_width, 6, header, border=1, align="C", fill=True)
     pdf.ln()
@@ -210,12 +240,28 @@ def create_pdf(summary, full_title, chart_path, model, bl_no):
             row["CTNER.SIZE"],
             f"{row['TOTAL_VOLUME']:.1f}",
             f"{row['CAPACITY']:.0f}",
-            f"{row['FILL_RATE_%']:.1f}%"
+            f"{row['FILL_RATE_%']:.1f}%",
+            "OK" if "OK" in row["STATUS"] else "NON CONFORME"
         ]
         
-        for value in row_values:
-            pdf.cell(col_width, 5, value, border=1, align="C")
+        for j, value in enumerate(row_values):
+            # Colorer la cellule STATUS
+            if j == 5:  # Colonne STATUS
+                if "OK" in value:
+                    pdf.set_fill_color(144, 238, 144)  # Vert clair
+                    pdf.set_text_color(0, 100, 0)
+                else:
+                    pdf.set_fill_color(255, 182, 193)  # Rose/rouge clair
+                    pdf.set_text_color(200, 0, 0)
+                pdf.cell(col_width, 5, value, border=1, align="C", fill=True)
+            else:
+                pdf.set_fill_color(255, 255, 255)
+                pdf.set_text_color(0, 0, 0)
+                pdf.cell(col_width, 5, value, border=1, align="C")
         pdf.ln()
+    
+    # Reset text color
+    pdf.set_text_color(0, 0, 0)
     
     # Si plus de 12 conteneurs, ajouter un message
     if len(summary) > 12:
@@ -345,15 +391,15 @@ def main():
                 # Calcul du résumé
                 summary = calculate_summary(df, cbm_col)
                 
-                # Métriques stylisées
+                # Métriques stylisées avec couleurs
                 st.markdown("---")
                 display_metrics(summary)
                 
-                # Affichage du tableau des résultats (sans colonne STATUS colorée)
+                # Affichage du tableau des résultats
                 st.markdown("---")
                 st.subheader("📊 Résultats par conteneur")
                 
-                # Affichage du tableau sans la colonne STATUS colorée
+                # Affichage du tableau complet
                 display_df = summary[["CONTAINER NO", "CTNER.SIZE", "TOTAL_VOLUME", "CAPACITY", "FILL_RATE_%", "STATUS"]].copy()
                 st.dataframe(display_df, use_container_width=True)
                 
