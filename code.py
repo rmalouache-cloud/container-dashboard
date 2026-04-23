@@ -13,7 +13,7 @@ import numpy as np
 # =========================
 st.set_page_config(
     page_title="Container Dashboard",
-    
+    page_icon="📦",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -314,11 +314,9 @@ def create_pdf(summary, full_title, chart_path, model, bl_no, lang='en'):
     else:
         pdf.set_y(15)
     
-    # Titre - sans emojis pour éviter les erreurs d'encodage
+    # Titre - sans emojis
     pdf.set_font("Arial", "B", 12)
-    # Nettoyer le titre des emojis potentiels
-    clean_title = full_title.replace('📦', '').strip()
-    pdf.cell(0, 8, clean_title, ln=True, align="C")
+    pdf.cell(0, 8, full_title, ln=True, align="C")
     pdf.ln(5)
     
     # Métriques dans le PDF (sans couleurs)
@@ -416,12 +414,12 @@ def display_header(lang='en'):
         with col1:
             st.image(container_logo, width=150)
         with col2:
-            st.title(f"📦 {texts['title']}")
+            st.title(texts['title'])
             st.caption(texts['subtitle'])
         with col3:
             st.image(stream_logo, width=150)
     except FileNotFoundError:
-        st.title(f"📦 {texts['title']}")
+        st.title(texts['title'])
         st.caption(texts['subtitle'])
 
 # =========================
@@ -460,7 +458,7 @@ def main():
     
     # Formulaire d'informations
     with st.container():
-        st.markdown(f"### {texts['study_info']}")
+        st.markdown(f"### 📦 {texts['study_info']}")
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -491,7 +489,7 @@ def main():
     
     # Upload du fichier
     file = st.file_uploader(
-        texts['upload'], 
+        f"📂 {texts['upload']}", 
         type=["xlsx"],
         help=texts['upload_help']
     )
