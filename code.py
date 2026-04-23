@@ -153,71 +153,87 @@ def display_metrics(summary):
         """, unsafe_allow_html=True)
 
 def create_pdf(summary, full_title, chart_path, model, bl_no):
-    """Génère le rapport PDF"""
+    """Génère le rapport PDF sur une seule page"""
     pdf = FPDF("P", "mm", "A4")
     pdf.add_page()
     
-    # Entête
+    # Entête avec logo (positionné en haut)
     logo_path = "entete.PNG"
     if os.path.exists(logo_path):
         pdf.image(logo_path, x=0, y=0, w=210, h=25)
-        pdf.ln(55)
+        pdf.set_y(20)  # Position après le logo
     else:
-        pdf.ln(20)
+        pdf.set_y(10)
     
-    # Titre
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, full_title, ln=True, align="C")
-    pdf.ln(5)
+    # Titre - directement après le logo
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 8, full_title, ln=True, align="C")
+    pdf.ln(3)
     
-    # Métriques dans le PDF
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(95, 8, f"Total Conteneurs: {len(summary)}", border=0, ln=0)
-    pdf.cell(95, 8, f"Taux Moyen: {summary['FILL_RATE_%'].mean():.1f}%", border=0, ln=1)
+    # Métriques dans le PDF (compact)
+    pdf.set_font("Arial", "B", 9)
+    
+    # Première ligne de métriques
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(95, 7, f"Total Conteneurs: {len(summary)}", border=1, fill=True, align="C")
+    pdf.cell(95, 7, f"Taux Moyen: {summary['FILL_RATE_%'].mean():.1f}%", border=1, fill=True, align="C", ln=1)
+    
+    # Deuxième ligne de métriques
     compliant = len(summary[summary["FILL_RATE_%"] >= FILL_RATE_THRESHOLD])
-    pdf.cell(95, 8, f"Conteneurs Conformes: {compliant}/{len(summary)}", border=0, ln=0)
-    pdf.cell(95, 8, f"Volume Total: {summary['TOTAL_VOLUME'].sum():.1f} m³", border=0, ln=1)
-    pdf.ln(5)
+    pdf.cell(95, 7, f"Conteneurs Conformes: {compliant}/{len(summary)}", border=1, fill=True, align="C")
+    pdf.cell(95, 7, f"Volume Total: {summary['TOTAL_VOLUME'].sum():.1f} m³", border=1, fill=True, align="C", ln=1)
     
-    # Tableau
-    pdf.set_font("Arial", "B", 8)
+    pdf.ln(4)
+    
+    # Tableau compact (ajusté pour tenir sur une page)
+    pdf.set_font("Arial", "B", 7)
     page_width = pdf.w - 20
     col_width = page_width / 5
     
     headers = ["CONTAINER NO", "SIZE", "TOTAL VOLUME", "CAPACITY", "FILL RATE"]
     
+    # En-tête du tableau
     for header in headers:
-        pdf.cell(col_width, 8, header, border=1, align="C")
+        pdf.cell(col_width, 6, header, border=1, align="C", fill=True)
     pdf.ln()
     
-    pdf.set_font("Arial", "", 8)
+    # Corps du tableau
+    pdf.set_font("Arial", "", 6.5)
     
-    for i, (_, row) in enumerate(summary.iterrows()):
-        if i >= MAX_ROWS_PER_PAGE:
-            pdf.add_page()
-            # Re-titre du tableau sur nouvelle page
-            for header in headers:
-                pdf.cell(col_width, 8, header, border=1, align="C")
-            pdf.ln()
-        
+    # Limiter la hauteur du tableau pour que tout tienne sur une page
+    max_rows = min(len(summary), 12)  # Maximum 12 lignes pour rester sur une page
+    
+    for i in range(max_rows):
+        row = summary.iloc[i]
         row_values = [
-            row["CONTAINER NO"],
+            str(row["CONTAINER NO"]),
             row["CTNER.SIZE"],
-            f"{row['TOTAL_VOLUME']:.2f}",
+            f"{row['TOTAL_VOLUME']:.1f}",
             f"{row['CAPACITY']:.0f}",
             f"{row['FILL_RATE_%']:.1f}%"
         ]
         
         for value in row_values:
-            pdf.cell(col_width, 8, str(value), border=1, align="C")
+            pdf.cell(col_width, 5, value, border=1, align="C")
         pdf.ln()
     
-    # Graphique
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Visualisation du taux de remplissage", ln=True, align="C")
+    # Si plus de 12 conteneurs, ajouter un message
+    if len(summary) > 12:
+        pdf.set_font("Arial", "I", 7)
+        pdf.cell(0, 5, f"... et {len(summary) - 12} autre(s) conteneur(s) non affiché(s)", ln=True, align="C")
+    
     pdf.ln(3)
-    pdf.image(chart_path, x=10, w=190)
+    
+    # Graphique (redimensionné pour tenir sur la page)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(0, 6, "Visualisation du taux de remplissage", ln=True, align="C")
+    pdf.ln(2)
+    
+    # Calculer l'espace restant pour le graphique
+    remaining_space = 297 - pdf.get_y() - 20  # Hauteur A4 moins marge
+    chart_height = min(remaining_space, 80)  # Maximum 80mm pour le graphique
+    
+    pdf.image(chart_path, x=10, w=190, h=chart_height)
     
     return pdf.output(dest="S").encode("latin1")
 
@@ -353,8 +369,22 @@ def main():
                 
                 # Sauvegarde temporaire du graphique pour le PDF
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
-                    fig_pdf = create_chart(summary, "CONTAINER NO", "FILL_RATE_%")
-                    fig_pdf.savefig(tmp_img.name, dpi=300, bbox_inches="tight")
+                    # Créer un graphique plus petit pour le PDF
+                    fig_pdf, ax_pdf = plt.subplots(figsize=(10, 4))
+                    bars = ax_pdf.bar(range(len(summary["CONTAINER NO"])), summary["FILL_RATE_%"], 
+                                      color=['#2ecc71' if x >= FILL_RATE_THRESHOLD else '#e74c3c' 
+                                             for x in summary["FILL_RATE_%"]], 
+                                      alpha=0.8, edgecolor='black', linewidth=1)
+                    ax_pdf.axhline(y=FILL_RATE_THRESHOLD, color='red', linestyle='--', linewidth=2)
+                    ax_pdf.set_ylim(0, 100)
+                    ax_pdf.set_ylabel("Taux de remplissage (%)")
+                    ax_pdf.set_xlabel("Numéro du conteneur")
+                    ax_pdf.set_title("Taux de Remplissage par Conteneur")
+                    ax_pdf.set_xticks(range(len(summary["CONTAINER NO"])))
+                    ax_pdf.set_xticklabels(summary["CONTAINER NO"], rotation=45, ha='right', fontsize=8)
+                    ax_pdf.grid(True, alpha=0.3, axis='y')
+                    fig_pdf.tight_layout()
+                    fig_pdf.savefig(tmp_img.name, dpi=200, bbox_inches="tight")
                     plt.close(fig_pdf)
                     
                     # Création du PDF
@@ -374,6 +404,10 @@ def main():
                         use_container_width=True,
                         type="primary"
                     )
+                
+                # Message d'information sur le PDF
+                if len(summary) > 12:
+                    st.info(f"💡 Note: Le PDF affiche les {min(12, len(summary))} premiers conteneurs sur {len(summary)} pour rester sur une seule page. Les métriques globales restent complètes.")
                 
             else:
                 st.error("❌ Colonne 'CBM' introuvable. Vérifiez que votre fichier contient une colonne avec 'CBM' dans son nom.")
