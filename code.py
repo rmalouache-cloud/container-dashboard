@@ -6,6 +6,7 @@ from fpdf import FPDF
 import tempfile
 import os
 from pathlib import Path
+import numpy as np
 
 # =========================
 # CONFIGURATION DE LA PAGE
@@ -46,56 +47,110 @@ def calculate_summary(df, cbm_col):
     summary["STATUS"] = summary["FILL_RATE_%"].apply(
         lambda x: "✅ OK" if x >= FILL_RATE_THRESHOLD else "❌ NON CONFORME"
     )
-    summary["STATUS_COLOR"] = summary["FILL_RATE_%"].apply(
-        lambda x: "green" if x >= FILL_RATE_THRESHOLD else "red"
-    )
     
     return summary
 
 def create_chart(data, container_col, fill_rate_col, threshold=FILL_RATE_THRESHOLD):
-    """Crée le graphique du taux de remplissage"""
-    fig, ax = plt.subplots(figsize=(10, 5))
+    """Crée le graphique du taux de remplissage avec texte diagonal pour les labels"""
+    fig, ax = plt.subplots(figsize=(12, 6))
     
-    bars = ax.bar(data[container_col], data[fill_rate_col], 
+    # Création des barres
+    bars = ax.bar(range(len(data[container_col])), data[fill_rate_col], 
                   color=['#2ecc71' if x >= threshold else '#e74c3c' 
                          for x in data[fill_rate_col]], 
                   alpha=0.8, edgecolor='black', linewidth=1)
     
+    # Ligne de seuil
     ax.axhline(y=threshold, color='red', linestyle='--', 
                linewidth=2, label=f'Seuil ({threshold}%)', zorder=5)
     
+    # Configuration des axes
     ax.set_ylim(0, 100)
+    ax.set_ylabel("Taux de remplissage (%)", fontsize=12, fontweight='bold')
+    ax.set_xlabel("Numéro du conteneur", fontsize=12, fontweight='bold')
     ax.set_title("Taux de Remplissage par Conteneur", fontsize=14, fontweight='bold')
-    ax.set_ylabel("Taux de remplissage (%)", fontsize=11)
-    ax.set_xlabel("Numéro du conteneur", fontsize=11)
     ax.grid(True, alpha=0.3, axis='y')
-    ax.legend(loc='upper right')
+    ax.legend(loc='upper right', fontsize=10)
+    
+    # Rotation des labels pour meilleure lisibilité
+    ax.set_xticks(range(len(data[container_col])))
+    ax.set_xticklabels(data[container_col], rotation=45, ha='right', fontsize=9)
     
     # Ajout des valeurs sur les barres
-    for bar in bars:
+    for i, bar in enumerate(bars):
         height = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2., height + 1,
-                f'{height:.1f}%', ha='center', va='bottom', fontsize=9)
+                f'{height:.1f}%', ha='center', va='bottom', fontsize=9, fontweight='bold')
     
     fig.tight_layout()
     return fig
 
 def display_metrics(summary):
-    """Affiche les métriques principales"""
+    """Affiche les métriques principales dans des cartes stylisées"""
     col1, col2, col3, col4 = st.columns(4)
     
+    # Style CSS personnalisé pour les cartes
+    st.markdown("""
+        <style>
+        .metric-card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #2ecc71;
+        }
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     with col1:
-        st.metric("Nombre total de conteneurs", len(summary))
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">📦 TOTAL CONTENEURS</div>
+                <div class="metric-value">{len(summary)}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
     with col2:
         avg_fill = summary["FILL_RATE_%"].mean()
-        st.metric("Taux de remplissage moyen", f"{avg_fill:.1f}%")
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">📊 TAUX MOYEN</div>
+                <div class="metric-value">{avg_fill:.1f}%</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
     with col3:
         compliant = len(summary[summary["FILL_RATE_%"] >= FILL_RATE_THRESHOLD])
-        st.metric("Conteneurs conformes", f"{compliant}/{len(summary)}")
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">✅ CONTENEURS CONFORMES</div>
+                <div class="metric-value">{compliant}/{len(summary)}</div>
+            </div>
+        """, unsafe_allow_html=True)
+    
     with col4:
         total_volume = summary["TOTAL_VOLUME"].sum()
         total_capacity = summary["CAPACITY"].sum()
-        st.metric("Volume total", f"{total_volume:.1f} / {total_capacity:.0f} m³")
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">📐 VOLUME TOTAL</div>
+                <div class="metric-value">{total_volume:.1f} m³</div>
+                <div class="metric-label">Capacité: {total_capacity:.0f} m³</div>
+            </div>
+        """, unsafe_allow_html=True)
 
 def create_pdf(summary, full_title, chart_path, model, bl_no):
     """Génère le rapport PDF"""
@@ -115,12 +170,21 @@ def create_pdf(summary, full_title, chart_path, model, bl_no):
     pdf.cell(0, 10, full_title, ln=True, align="C")
     pdf.ln(5)
     
+    # Métriques dans le PDF
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(95, 8, f"Total Conteneurs: {len(summary)}", border=0, ln=0)
+    pdf.cell(95, 8, f"Taux Moyen: {summary['FILL_RATE_%'].mean():.1f}%", border=0, ln=1)
+    compliant = len(summary[summary["FILL_RATE_%"] >= FILL_RATE_THRESHOLD])
+    pdf.cell(95, 8, f"Conteneurs Conformes: {compliant}/{len(summary)}", border=0, ln=0)
+    pdf.cell(95, 8, f"Volume Total: {summary['TOTAL_VOLUME'].sum():.1f} m³", border=0, ln=1)
+    pdf.ln(5)
+    
     # Tableau
     pdf.set_font("Arial", "B", 8)
     page_width = pdf.w - 20
-    col_width = page_width / 6
+    col_width = page_width / 5
     
-    headers = ["CONTAINER NO", "SIZE", "TOTAL VOLUME", "CAPACITY", "FILL RATE", "STATUS"]
+    headers = ["CONTAINER NO", "SIZE", "TOTAL VOLUME", "CAPACITY", "FILL RATE"]
     
     for header in headers:
         pdf.cell(col_width, 8, header, border=1, align="C")
@@ -141,16 +205,10 @@ def create_pdf(summary, full_title, chart_path, model, bl_no):
             row["CTNER.SIZE"],
             f"{row['TOTAL_VOLUME']:.2f}",
             f"{row['CAPACITY']:.0f}",
-            f"{row['FILL_RATE_%']:.1f}%",
-            row["STATUS"]
+            f"{row['FILL_RATE_%']:.1f}%"
         ]
         
-        for j, value in enumerate(row_values):
-            if j == 5:  # Colonne STATUS
-                pdf.set_text_color(0, 150, 0) if "OK" in value else pdf.set_text_color(255, 0, 0)
-            else:
-                pdf.set_text_color(0, 0, 0)
-            
+        for value in row_values:
             pdf.cell(col_width, 8, str(value), border=1, align="C")
         pdf.ln()
     
@@ -271,22 +329,19 @@ def main():
                 # Calcul du résumé
                 summary = calculate_summary(df, cbm_col)
                 
-                # Métriques
+                # Métriques stylisées
+                st.markdown("---")
                 display_metrics(summary)
                 
-                # Affichage du tableau des résultats
+                # Affichage du tableau des résultats (sans colonne STATUS colorée)
                 st.markdown("---")
                 st.subheader("📊 Résultats par conteneur")
                 
-                # Formatage stylisé du tableau
-                styled_summary = summary.style.apply(
-                    lambda x: ['background-color: #90EE90' if v == '✅ OK' 
-                               else 'background-color: #FFB6C1' for v in x], 
-                    subset=['STATUS']
-                )
-                st.dataframe(styled_summary, use_container_width=True)
+                # Affichage du tableau sans la colonne STATUS colorée
+                display_df = summary[["CONTAINER NO", "CTNER.SIZE", "TOTAL_VOLUME", "CAPACITY", "FILL_RATE_%", "STATUS"]].copy()
+                st.dataframe(display_df, use_container_width=True)
                 
-                # Graphique
+                # Graphique avec labels diagonaux
                 st.subheader("📈 Taux de remplissage")
                 fig = create_chart(summary, "CONTAINER NO", "FILL_RATE_%")
                 st.pyplot(fig)
@@ -309,13 +364,16 @@ def main():
                     os.unlink(tmp_img.name)
                 
                 # Bouton de téléchargement
-                st.download_button(
-                    label="📥 Télécharger le rapport PDF",
-                    data=pdf_bytes,
-                    file_name=f"{model}_{bl_no}_dashboard.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    st.download_button(
+                        label="📥 Télécharger le rapport PDF",
+                        data=pdf_bytes,
+                        file_name=f"{model}_{bl_no}_dashboard.pdf",
+                        mime="application/pdf",
+                        use_container_width=True,
+                        type="primary"
+                    )
                 
             else:
                 st.error("❌ Colonne 'CBM' introuvable. Vérifiez que votre fichier contient une colonne avec 'CBM' dans son nom.")
