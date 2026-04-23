@@ -193,25 +193,20 @@ def create_pdf(summary, full_title, chart_path, model, bl_no):
     pdf.cell(0, 8, full_title, ln=True, align="C")
     pdf.ln(5)
     
-    # Métriques dans le PDF (compact)
+    # Métriques dans le PDF (sans couleurs - texte noir sur fond blanc)
     pdf.set_font("Arial", "B", 9)
+    pdf.set_text_color(0, 0, 0)  # Noir
+    pdf.set_fill_color(255, 255, 255)  # Blanc
     
     # Première ligne de métriques
-    pdf.set_fill_color(102, 126, 234)  # Couleur violette
-    pdf.set_text_color(255, 255, 255)
-    pdf.cell(95, 7, f"Total Conteneurs: {len(summary)}", border=1, fill=True, align="C")
-    pdf.set_fill_color(240, 147, 251)  # Couleur rose
-    pdf.cell(95, 7, f"Taux Moyen: {summary['FILL_RATE_%'].mean():.1f}%", border=1, fill=True, align="C", ln=1)
+    pdf.cell(95, 7, f"Total Conteneurs: {len(summary)}", border=1, fill=False, align="C")
+    pdf.cell(95, 7, f"Taux Moyen: {summary['FILL_RATE_%'].mean():.1f}%", border=1, fill=False, align="C", ln=1)
     
     # Deuxième ligne de métriques
     compliant = len(summary[summary["FILL_RATE_%"] >= FILL_RATE_THRESHOLD])
-    pdf.set_fill_color(79, 172, 254)  # Couleur bleue
-    pdf.cell(95, 7, f"Conteneurs Conformes: {compliant}/{len(summary)}", border=1, fill=True, align="C")
-    pdf.set_fill_color(67, 233, 123)  # Couleur verte
-    pdf.cell(95, 7, f"Volume Total: {summary['TOTAL_VOLUME'].sum():.1f} m³", border=1, fill=True, align="C", ln=1)
+    pdf.cell(95, 7, f"Conteneurs Conformes: {compliant}/{len(summary)}", border=1, fill=False, align="C")
+    pdf.cell(95, 7, f"Volume Total: {summary['TOTAL_VOLUME'].sum():.1f} m³", border=1, fill=False, align="C", ln=1)
     
-    # Reset text color to black
-    pdf.set_text_color(0, 0, 0)
     pdf.ln(4)
     
     # Tableau compact avec colonne STATUS
