@@ -319,19 +319,19 @@ def create_pdf(summary, full_title, chart_path, model, bl_no, lang='en'):
     pdf.cell(0, 8, full_title, ln=True, align="C")
     pdf.ln(5)
     
-    # Métriques dans le PDF (sans couleurs)
+    # Métriques dans le PDF (sans couleurs) - Version simplifiée sans emojis
     pdf.set_font("Arial", "B", 9)
     pdf.set_text_color(0, 0, 0)
     pdf.set_fill_color(255, 255, 255)
     
     # Première ligne de métriques
-    pdf.cell(95, 7, f"{texts['total_containers'].replace('📦', '').strip()}: {len(summary)}", border=1, fill=False, align="C")
-    pdf.cell(95, 7, f"{texts['avg_rate'].replace('📊', '').strip()}: {summary['FILL_RATE_%'].mean():.1f}%", border=1, fill=False, align="C", ln=1)
+    pdf.cell(95, 7, f"Total Containers: {len(summary)}", border=1, fill=False, align="C")
+    pdf.cell(95, 7, f"Average Rate: {summary['FILL_RATE_%'].mean():.1f}%", border=1, fill=False, align="C", ln=1)
     
     # Deuxième ligne de métriques
     compliant = len(summary[summary["FILL_RATE_%"] >= FILL_RATE_THRESHOLD])
-    pdf.cell(95, 7, f"{texts['compliant'].replace('✅', '').strip()}: {compliant}/{len(summary)}", border=1, fill=False, align="C")
-    pdf.cell(95, 7, f"{texts['total_volume'].replace('📐', '').strip()}: {summary['TOTAL_VOLUME'].sum():.1f} m³", border=1, fill=False, align="C", ln=1)
+    pdf.cell(95, 7, f"Compliant Containers: {compliant}/{len(summary)}", border=1, fill=False, align="C")
+    pdf.cell(95, 7, f"Total Volume: {summary['TOTAL_VOLUME'].sum():.1f} m³", border=1, fill=False, align="C", ln=1)
     
     pdf.ln(4)
     
@@ -340,12 +340,8 @@ def create_pdf(summary, full_title, chart_path, model, bl_no, lang='en'):
     page_width = pdf.w - 20
     col_width = page_width / 6
     
-    headers = [texts['container_no'].replace('Numéro du conteneur', 'CONTAINER NO').replace('Container Number', 'CONTAINER NO'),
-               texts['size'].upper() if lang == 'fr' else "SIZE",
-               texts['total_vol'].upper() if lang == 'fr' else "TOTAL VOLUME",
-               texts['capacity'].upper(),
-               texts['fill_rate_pdf'].upper(),
-               texts['status'].upper()]
+    # En-têtes en anglais fixe pour le PDF (plus simple)
+    headers = ["CONTAINER NO", "SIZE", "TOTAL VOLUME", "CAPACITY", "FILL RATE", "STATUS"]
     
     # En-tête du tableau
     pdf.set_fill_color(200, 200, 200)
@@ -365,12 +361,12 @@ def create_pdf(summary, full_title, chart_path, model, bl_no, lang='en'):
             f"{row['TOTAL_VOLUME']:.1f}",
             f"{row['CAPACITY']:.0f}",
             f"{row['FILL_RATE_%']:.1f}%",
-            texts['status_ok'] if "OK" in row["STATUS"] else texts['status_nok']
+            "OK" if "OK" in row["STATUS"] else "NON COMPLIANT" if lang == 'en' else "NON CONFORME"
         ]
         
         for j, value in enumerate(row_values):
             if j == 5:
-                if "OK" in row["STATUS"]:
+                if "OK" in value:
                     pdf.set_fill_color(144, 238, 144)
                     pdf.set_text_color(0, 100, 0)
                 else:
@@ -387,13 +383,19 @@ def create_pdf(summary, full_title, chart_path, model, bl_no, lang='en'):
     
     if len(summary) > 12:
         pdf.set_font("Arial", "I", 7)
-        pdf.cell(0, 5, f"... {texts['and']} {len(summary) - 12} {texts['other_containers']}", ln=True, align="C")
+        if lang == 'fr':
+            pdf.cell(0, 5, f"... et {len(summary) - 12} autre(s) conteneur(s) non affiché(s)", ln=True, align="C")
+        else:
+            pdf.cell(0, 5, f"... and {len(summary) - 12} other container(s) not shown", ln=True, align="C")
     
     pdf.ln(3)
     
     # Graphique
     pdf.set_font("Arial", "B", 10)
-    pdf.cell(0, 6, texts['visualization'], ln=True, align="C")
+    if lang == 'fr':
+        pdf.cell(0, 6, "Visualisation du taux de remplissage", ln=True, align="C")
+    else:
+        pdf.cell(0, 6, "Fill Rate Visualization", ln=True, align="C")
     pdf.ln(2)
     
     remaining_space = 297 - pdf.get_y() - 20
